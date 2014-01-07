@@ -1,0 +1,27 @@
+source $TRIPLEO_ROOT/tripleo-overcloud-passwords
+
+wait_for 190 10 stack-ready overcloud
+export OVERCLOUD_IP=$(nova list | grep notcompute.*ctlplane | sed  -e "s/.*=\\([0-9.]*\\).*/\1/")
+ssh-keygen -R $OVERCLOUD_IP
+
+source $TRIPLEO_ROOT/tripleo-incubator/overcloudrc
+
+init-keystone -p $OVERCLOUD_ADMIN_PASSWORD $OVERCLOUD_ADMIN_TOKEN \
+    $OVERCLOUD_IP admin@example.com heat-admin@$OVERCLOUD_IP
+setup-endpoints $OVERCLOUD_IP --cinder-password $OVERCLOUD_CINDER_PASSWORD \
+    --glance-password $OVERCLOUD_GLANCE_PASSWORD \
+    --heat-password $OVERCLOUD_HEAT_PASSWORD \
+    --neutron-password $OVERCLOUD_NEUTRON_PASSWORD \
+    --nova-password $OVERCLOUD_NOVA_PASSWORD \
+    --swift-password $OVERCLOUD_SWIFT_PASSWORD
+keystone role-create --name heat_stack_user
+user-config
+setup-neutron "" "" 10.0.0.0/8 "" "" "" 192.0.2.45 192.0.2.64 192.0.2.0/24
+
+glance image-create --name user --public --disk-format qcow2 \
+    --container-format bare --file $TRIPLEO_ROOT/user.qcow2
+
+echo $OVERCLOUD_IP
+
+#load-image -d $TRIPLEO_ROOT/overcloud-control.qcow2
+#load-image -d $TRIPLEO_ROOT/overcloud-compute.qcow2
