@@ -21,6 +21,9 @@ setup-neutron "" "" 10.0.0.0/8 "" "" "" 192.0.2.45 192.0.2.64 192.0.2.0/24
 glance image-create --name user --public --disk-format qcow2 \
     --container-format bare --file $TRIPLEO_ROOT/user.qcow2
 
+nova flavor-delete m1.tiny
+nova flavor-create m1.tiny 1 512 2 1
+
 echo $OVERCLOUD_IP
 
 #load-image -d $TRIPLEO_ROOT/overcloud-control.qcow2
