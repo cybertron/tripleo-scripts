@@ -4,3 +4,10 @@ export NODE_DIST="fedora selinux-permissive"
 export TRIPLEO_CLEANUP=1
 export NeutronPublicInterface=ens4
 export OVERCLOUD_COMPUTESCALE=1
+
+# To use a pending review branch
+#DIB_REPOLOCATION_heat=https://review.openstack.org/openstack/heat
+#DIB_REPOREF_heat=[get this value from Gerrit in the checkout command]
+
+# To use an older commit, just set the repo ref
+#DIB_REPOREF_heat=[commit hash here]
