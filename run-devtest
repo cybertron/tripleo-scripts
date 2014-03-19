@@ -1,0 +1,3 @@
+#!/bin/bash
+
+~/tripleo/tripleo-incubator/scripts/devtest.sh --trash-my-machine

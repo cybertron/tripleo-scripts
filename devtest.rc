@@ -1,0 +1,6 @@
+# Source me to set up the environment before running devtest
+export LIBVIRT_DEFAULT_URI=${LIBVIRT_DEFAULT_URI:-"qemu:///system"}
+export NODE_DIST="fedora selinux-permissive"
+export TRIPLEO_CLEANUP=1
+export NeutronPublicInterface=ens4
+export OVERCLOUD_COMPUTESCALE=1
