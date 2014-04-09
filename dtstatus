@@ -9,7 +9,7 @@ if [ -n "$current" ]; then
     echo $(echo $current | sed 's/.*devtest_\([a-z]\+\).sh.*/\1/')
     image=$(ps auxww | grep disk-image-create | grep -v grep)
     if [ -n "$image" ]; then
-        image=$(echo $image | sed 's|.*-o \([a-z\-\/]\+\).*|\1|')
+        image=$(echo $image | sed 's|.*-o \([a-z\/-]\+\).*|\1|')
         echo " - building image: $(basename $image)"
     fi
     waitfor=$(ps auxww | grep wait_for | grep -v grep)
