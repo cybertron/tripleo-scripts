@@ -4,7 +4,6 @@ export LIBVIRT_DEFAULT_URI=${LIBVIRT_DEFAULT_URI:-"qemu:///system"}
 export LIBVIRT_NIC_DRIVER=virtio
 export NODE_ARCH="amd64"
 export NODE_DIST="fedora selinux-permissive"
-export TRIPLEO_CLEANUP=1
 export NeutronPublicInterface=eth0
 export OVERCLOUD_COMPUTESCALE=1
 export TRIPLEO_ROOT=~/tripleo
