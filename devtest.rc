@@ -9,11 +9,14 @@ export OVERCLOUD_COMPUTESCALE=1
 export TRIPLEO_ROOT=~/tripleo
 export DIB_COMMON_ELEMENTS="stackuser pip-cache pypi"
 export PYPI_MIRROR_URL=http://roxy.torment/pypi/Fedora-20
+# Uncomment when not running against Fedora 20
+#export PYPI_MIRROR_URL=http://roxy.torment/pypi/
 export PYPI_MIRROR_URL_1=http://roxy.torment/pypi/
 
-export SEED_DIB_EXTRA_ARGS="rabbitmq-server -u"
-export UNDERCLOUD_DIB_EXTRA_ARGS="rabbitmq-server -u"
-export OVERCLOUD_CONTROL_DIB_EXTRA_ARGS="rabbitmq-server -u"
+export MESSAGING_PROVIDER=${MESSAGING_PROVIDER:-rabbitmq-server}
+export SEED_DIB_EXTRA_ARGS="$MESSAGING_PROVIDER -u"
+export UNDERCLOUD_DIB_EXTRA_ARGS="$MESSAGING_PROVIDER -u"
+export OVERCLOUD_CONTROL_DIB_EXTRA_ARGS="$MESSAGING_PROVIDER -u"
 export OVERCLOUD_COMPUTE_DIB_EXTRA_ARGS="-u"
 
 # To use a pending review branch
