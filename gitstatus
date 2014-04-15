@@ -1,0 +1,9 @@
+#!/bin/bash
+
+for project in tripleo-incubator diskimage-builder tripleo-image-elements tripleo-heat-templates; do
+    pushd $TRIPLEO_ROOT/$project > /dev/null
+    echo "$project"
+    git branch | grep "\*"
+    echo
+    popd > /dev/null
+done
