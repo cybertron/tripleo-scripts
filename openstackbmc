@@ -33,9 +33,11 @@ class OpenStackBmc(bmc.Bmc):
                                             tenant, auth_url)
 
     def get_boot_device(self):
+        # Not supported yet
         pass
 
     def set_boot_device(self, bootdevice):
+        # Not supported yet
         pass
 
     def cold_reset(self):
@@ -43,18 +45,29 @@ class OpenStackBmc(bmc.Bmc):
         print 'Shutting down in response to BMC cold reset request'
         sys.exit(0)
 
+    def _instance_active(self):
+        return self.novaclient.servers.get(self.instance).status == 'ACTIVE'
+
     def get_power_state(self):
         print 'Getting power state for %s' % self.instance
-        return self.novaclient.servers.get(self.instance).status == 'ACTIVE'
+        return self._instance_active()
 
     def power_off(self):
         # this should be power down without waiting for clean shutdown
-        self.novaclient.servers.stop(self.instance)
-        print 'Powered off %s' % self.instance
+        if self._instance_active():
+            self.novaclient.servers.stop(self.instance)
+            print 'Powered off %s' % self.instance
+        else:
+            print '%s is already off.' % self.instance
+            return 0xd5
 
     def power_on(self):
-        self.novaclient.servers.start(self.instance)
-        print 'Powered on %s' % self.instance
+        if not self._instance_active():
+            self.novaclient.servers.start(self.instance)
+            print 'Powered on %s' % self.instance
+        else:
+            print '%s is already on.' % self.instance
+            return 0xd5
 
     def power_reset(self):
         pass
