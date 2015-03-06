@@ -1,0 +1,46 @@
+heat_template_version: 2014-10-16
+
+description: Template for deploying OpenStack BMC nodes.  Can be wrapped in a ResourceGroup for scaling.
+
+# Usage: heat stack-create -f ./openstack-bmc.yaml -e ./resource-registry.yaml -P node_count=3 baremetal
+
+parameters:
+  flavor:
+    type: string
+    default: bmc
+
+  image:
+    type: string
+    default: openstack-bmc
+
+  key_name:
+    type: string
+    default: bnemec
+
+  node_count:
+    type: number
+    default: 1
+
+  private_net:
+    type: string
+    default: private
+
+  provision_net:
+    type: string
+    default: undercloud
+
+resources:
+  openstack_bmc_servers:
+    type: OS::Heat::ResourceGroup
+    properties:
+      count: {get_param: node_count}
+      resource_def:
+        type: OS::QuintupleO::BMC
+        properties:
+            flavor: {get_param: flavor}
+            image: {get_param: image}
+            key_name: {get_param: key_name}
+            private_net: {get_param: private_net}
+            provision_net: {get_param: provision_net}
+            bmc_name: bmc_%index%
+            baremetal_name: baremetal_%index%

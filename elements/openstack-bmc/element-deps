@@ -1,0 +1,5 @@
+os-apply-config
+os-collect-config
+os-refresh-config
+pip-and-virtualenv
+stackuser

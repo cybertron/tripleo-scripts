@@ -1,0 +1,67 @@
+heat_template_version: 2014-10-16
+
+parameters:
+  flavor:
+    type: string
+    default: bmc
+
+  image:
+    type: string
+    default: openstack-bmc
+
+  key_name:
+    type: string
+    default: bnemec
+
+  bmc_name:
+    type: string
+    default: bmc
+
+  baremetal_name:
+    type: string
+    default: bmc
+
+  private_net:
+    type: string
+
+  provision_net:
+    type: string
+
+resources:
+    OpenStackBMCServer:
+        type: OS::Nova::Server
+        properties:
+            flavor: {get_param: flavor}
+            image: {get_param: image}
+            key_name: {get_param: key_name}
+            networks:
+                - network: {get_param: private_net}
+            user_data_format: SOFTWARE_CONFIG
+            name: {get_param: bmc_name}
+
+    OpenStackBaremetalServer:
+        type: OS::Nova::Server
+        properties:
+            flavor: baremetal
+            image: empty
+            networks:
+                - network: {get_param: provision_net}
+                - network: {get_param: private_net}
+            name: {get_param: baremetal_name}
+
+    ServerConfig:
+        type: OS::Heat::StructuredConfig
+        properties:
+            group: os-apply-config
+            config:
+                bmc:
+                    instance: {get_input: instance}
+
+    ServerDeployment:
+        type: OS::Heat::StructuredDeployment
+        properties:
+            config: {get_resource: ServerConfig}
+            server: {get_resource: OpenStackBMCServer}
+            signal_transport: NO_SIGNAL
+            input_values:
+                instance: {get_param: baremetal_name}

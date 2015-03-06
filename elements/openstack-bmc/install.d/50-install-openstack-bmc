@@ -1,0 +1,17 @@
+#!/bin/bash
+
+set -eux
+set -o pipefail
+
+mkdir -p /opt/stack
+cd /opt/stack
+git clone https://github.com/cybertron/tripleo-scripts
+git clone https://git.openstack.org/stackforge/pyghmi
+
+yum install -y gcc python-devel libvirt-devel python-novaclient
+
+pushd pyghmi
+pip install .
+popd
+
+os-svc-daemon -i /usr -l -n openstack-bmc -u root -c bash -- /usr/local/bin/runbmc
