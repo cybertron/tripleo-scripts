@@ -29,6 +29,14 @@ parameters:
     type: string
     default: undercloud
 
+  bmc_prefix:
+    type: string
+    default: bmc
+
+  baremetal_prefix:
+    type: string
+    default: baremetal
+
 resources:
   openstack_bmc_servers:
     type: OS::Heat::ResourceGroup
@@ -42,5 +50,6 @@ resources:
             key_name: {get_param: key_name}
             private_net: {get_param: private_net}
             provision_net: {get_param: provision_net}
-            bmc_name: bmc_%index%
-            baremetal_name: baremetal_%index%
+            suffix: _%index%
+            bmc_prefix: {get_param: bmc_prefix}
+            baremetal_prefix: {get_param: baremetal_prefix}

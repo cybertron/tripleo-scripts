@@ -13,11 +13,11 @@ parameters:
     type: string
     default: bnemec
 
-  bmc_name:
+  bmc_prefix:
     type: string
     default: bmc
 
-  baremetal_name:
+  baremetal_prefix:
     type: string
     default: bmc
 
@@ -25,6 +25,9 @@ parameters:
     type: string
 
   provision_net:
+    type: string
+
+  suffix:
     type: string
 
 resources:
@@ -37,7 +40,11 @@ resources:
             networks:
                 - network: {get_param: private_net}
             user_data_format: SOFTWARE_CONFIG
-            name: {get_param: bmc_name}
+            name:
+                list_join:
+                    - ''
+                    - - {get_param: bmc_prefix}
+                      - {get_param: suffix}
 
     OpenStackBaremetalServer:
         type: OS::Nova::Server
@@ -47,7 +54,11 @@ resources:
             networks:
                 - network: {get_param: provision_net}
                 - network: {get_param: private_net}
-            name: {get_param: baremetal_name}
+            name:
+                list_join:
+                    - ''
+                    - - {get_param: baremetal_prefix}
+                      - {get_param: suffix}
 
     ServerConfig:
         type: OS::Heat::StructuredConfig
@@ -64,4 +75,8 @@ resources:
             server: {get_resource: OpenStackBMCServer}
             signal_transport: NO_SIGNAL
             input_values:
-                instance: {get_param: baremetal_name}
+                instance:
+                    list_join:
+                    - ''
+                    - - {get_param: baremetal_prefix}
+                      - {get_param: suffix}
