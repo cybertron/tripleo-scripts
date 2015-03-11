@@ -51,6 +51,8 @@ resources:
         properties:
             flavor: baremetal
             image: empty
+            config_drive: false
+            key_name: {get_param: key_name}
             networks:
                 - network: {get_param: provision_net}
                 - network: {get_param: private_net}

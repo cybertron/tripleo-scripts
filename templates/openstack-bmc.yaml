@@ -3,6 +3,7 @@ heat_template_version: 2014-10-16
 description: Template for deploying OpenStack BMC nodes.  Can be wrapped in a ResourceGroup for scaling.
 
 # Usage: heat stack-create -f ./openstack-bmc.yaml -e ./resource-registry.yaml -P node_count=3 baremetal
+# Ensure force_config_drive is _not_ set in nova.conf
 
 parameters:
   flavor:
