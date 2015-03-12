@@ -46,10 +46,18 @@ resources:
                     - - {get_param: bmc_prefix}
                       - {get_param: suffix}
 
+    BaremetalFlavor:
+        type: OS::Nova::Flavor
+        properties:
+            disk: 50
+            extra_specs: {"libvirt:pxe-first": 1}
+            ram: 4096
+            vcpus: 2
+
     OpenStackBaremetalServer:
         type: OS::Nova::Server
         properties:
-            flavor: baremetal
+            flavor: {get_resource: BaremetalFlavor}
             image: empty
             config_drive: false
             key_name: {get_param: key_name}
