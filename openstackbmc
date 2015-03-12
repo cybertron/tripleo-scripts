@@ -17,6 +17,12 @@
 # Virtual BMC for controlling OpenStack instances, based on fakebmc from
 # python-pyghmi
 
+# Sample ipmitool commands:
+# ipmitool -I lanplus -U admin -P password -H 127.0.0.1 power on
+# ipmitool -I lanplus -U admin -P password -H 127.0.0.1 power status
+# ipmitool -I lanplus -U admin -P password -H 127.0.0.1 chassis bootdev pxe|disk
+# ipmitool -I lanplus -U admin -P password -H 127.0.0.1 mc reset cold
+
 import argparse
 import sys
 
@@ -46,12 +52,27 @@ class OpenStackBmc(bmc.Bmc):
                 sys.exit(1)
 
     def get_boot_device(self):
-        # Not supported yet
-        pass
+        server = self.novaclient.servers.get(self.instance)
+        flavor = self.novaclient.flavors.get(server.flavor['id'])
+        have_key = 'libvirt:pxe-first' in flavor.get_keys()
+        retval = 'network' if have_key else 'hd'
+        print 'Reporting boot device', retval
+        return retval
 
     def set_boot_device(self, bootdevice):
-        # Not supported yet
-        pass
+        # NOTE(bnemec): This will change the boot device for _all_ instances
+        # using the same flavor.  It is therefore recommended that each
+        # baremetal instance have its own flavor.
+        server = self.novaclient.servers.get(self.instance)
+        flavor = self.novaclient.flavors.get(server.flavor['id'])
+        if bootdevice == 'network':
+            keys = flavor.get_keys()
+            keys['libvirt:pxe-first'] = 1
+            flavor.set_keys(keys)
+        else:
+            if 'libvirt:pxe-first' in flavor.get_keys():
+                flavor.unset_keys(['libvirt:pxe-first'])
+        print 'Set boot device to', bootdevice
 
     def cold_reset(self):
         # Reset of the BMC, not managed system, here we will exit the demo
