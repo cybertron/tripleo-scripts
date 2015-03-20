@@ -8,7 +8,7 @@ description: Template for deploying OpenStack BMC nodes.  Can be wrapped in a Re
 parameters:
   bmc_flavor:
     type: string
-    default: m1.tiny
+    default: m1.small
 
   bmc_image:
     type: string
