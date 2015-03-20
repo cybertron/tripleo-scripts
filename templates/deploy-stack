@@ -1,0 +1,3 @@
+#!/bin/bash
+
+heat stack-create -f ./openstack-bmc.yaml -e ./env.json -e ./resource-registry.yaml baremetal
