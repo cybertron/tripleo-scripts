@@ -1,25 +1,23 @@
 heat_template_version: 2014-10-16
 
 parameters:
-  flavor:
+  bmc_flavor:
     type: string
-    default: bmc
 
-  image:
+  bmc_image:
     type: string
-    default: openstack-bmc
+
+  baremetal_image:
+    type: string
 
   key_name:
     type: string
-    default: bnemec
 
   bmc_prefix:
     type: string
-    default: bmc
 
   baremetal_prefix:
     type: string
-    default: bmc
 
   private_net:
     type: string
@@ -30,12 +28,25 @@ parameters:
   suffix:
     type: string
 
+  os_user:
+    type: string
+
+  os_password:
+    type: string
+    hidden: true
+
+  os_tenant:
+    type: string
+
+  os_auth_url:
+    type: string
+
 resources:
     OpenStackBMCServer:
         type: OS::Nova::Server
         properties:
-            flavor: {get_param: flavor}
-            image: {get_param: image}
+            flavor: {get_param: bmc_flavor}
+            image: {get_param: bmc_image}
             key_name: {get_param: key_name}
             networks:
                 - network: {get_param: private_net}
@@ -58,7 +69,7 @@ resources:
         type: OS::Nova::Server
         properties:
             flavor: {get_resource: BaremetalFlavor}
-            image: empty
+            image: {get_param: baremetal_image}
             config_drive: false
             key_name: {get_param: key_name}
             networks:
@@ -77,6 +88,10 @@ resources:
             config:
                 bmc:
                     instance: {get_input: instance}
+                    user: {get_param: os_user}
+                    password: {get_param: os_password}
+                    tenant: {get_param: os_tenant}
+                    auth_url: {get_param: os_auth_url}
 
     ServerDeployment:
         type: OS::Heat::StructuredDeployment

@@ -2,21 +2,25 @@ heat_template_version: 2014-10-16
 
 description: Template for deploying OpenStack BMC nodes.  Can be wrapped in a ResourceGroup for scaling.
 
-# Usage: heat stack-create -f ./openstack-bmc.yaml -e ./resource-registry.yaml -P node_count=3 baremetal
+# Usage: heat stack-create -f ./openstack-bmc.yaml -e ./env.json ./resource-registry.yaml -P node_count=3 baremetal
 # Ensure force_config_drive is _not_ set in nova.conf
 
 parameters:
-  flavor:
+  bmc_flavor:
     type: string
-    default: bmc
+    default: m1.tiny
 
-  image:
+  bmc_image:
     type: string
     default: openstack-bmc
 
+  baremetal_image:
+    type: string
+    default: empty
+
   key_name:
     type: string
-    default: bnemec
+    default: default
 
   node_count:
     type: number
@@ -28,7 +32,7 @@ parameters:
 
   provision_net:
     type: string
-    default: undercloud
+    default: provision
 
   bmc_prefix:
     type: string
@@ -38,6 +42,22 @@ parameters:
     type: string
     default: baremetal
 
+  os_user:
+    type: string
+    default: admin
+
+  os_password:
+    type: string
+    default: password
+    hidden: true
+
+  os_tenant:
+    type: string
+    default: admin
+
+  os_auth_url:
+    type: string
+
 resources:
   openstack_bmc_servers:
     type: OS::Heat::ResourceGroup
@@ -46,11 +66,16 @@ resources:
       resource_def:
         type: OS::QuintupleO::BMC
         properties:
-            flavor: {get_param: flavor}
-            image: {get_param: image}
+            bmc_flavor: {get_param: bmc_flavor}
+            bmc_image: {get_param: bmc_image}
+            baremetal_image: {get_param: baremetal_image}
             key_name: {get_param: key_name}
             private_net: {get_param: private_net}
             provision_net: {get_param: provision_net}
             suffix: _%index%
             bmc_prefix: {get_param: bmc_prefix}
             baremetal_prefix: {get_param: baremetal_prefix}
+            os_user: {get_param: os_user}
+            os_password: {get_param: os_password}
+            os_tenant: {get_param: os_tenant}
+            os_auth_url: {get_param: os_auth_url}
