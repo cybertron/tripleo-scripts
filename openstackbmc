@@ -25,6 +25,7 @@
 
 import argparse
 import sys
+import time
 
 from novaclient import client as novaclient
 from novaclient import exceptions
@@ -37,6 +38,22 @@ class OpenStackBmc(bmc.Bmc):
         super(OpenStackBmc, self).__init__(authdata, port)
         self.novaclient = novaclient.Client(2, user, password,
                                             tenant, auth_url)
+        self.instance = None
+        # At times the bmc service is started before important things like
+        # networking have fully initialized.  Keep trying to find the
+        # instance indefinitely, since there's no point in continuing if
+        # we don't have an instance.
+        while True:
+            try:
+                self._find_instance():
+                if self.instance is not None:
+                    print 'Managing instance: %s' % self.instance
+                    break
+            except Exception as e:
+                print 'Exception finding instance "%s": %s' % (instance, e)
+                time.sleep(1)
+
+    def _find_instance(self):
         try:
             self.novaclient.servers.get(instance)
             self.instance = instance
