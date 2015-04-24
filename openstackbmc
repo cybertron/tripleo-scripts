@@ -45,7 +45,7 @@ class OpenStackBmc(bmc.Bmc):
         # we don't have an instance.
         while True:
             try:
-                self._find_instance():
+                self._find_instance()
                 if self.instance is not None:
                     print 'Managing instance: %s' % self.instance
                     break
