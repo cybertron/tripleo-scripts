@@ -45,7 +45,7 @@ class OpenStackBmc(bmc.Bmc):
         # we don't have an instance.
         while True:
             try:
-                self._find_instance()
+                self._find_instance(instance)
                 if self.instance is not None:
                     print 'Managing instance: %s' % self.instance
                     break
@@ -53,7 +53,7 @@ class OpenStackBmc(bmc.Bmc):
                 print 'Exception finding instance "%s": %s' % (instance, e)
                 time.sleep(1)
 
-    def _find_instance(self):
+    def _find_instance(self, instance):
         try:
             self.novaclient.servers.get(instance)
             self.instance = instance
