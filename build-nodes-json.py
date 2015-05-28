@@ -58,6 +58,8 @@ def main():
 
     bmcs = nova.servers.list(search_opts={'name': bmc_base + '_.*'})
     baremetals = nova.servers.list(search_opts={'name': baremetal_base + '_.*'})
+    bmcs = sorted(bmcs, key=lambda x: x.name)
+    baremetals = sorted(baremetals, key=lambda x: x.name)
     nodes = []
 
     for pair in zip(bmcs, baremetals):
