@@ -26,7 +26,7 @@ def main():
                         help='Private network name')
     parser.add_argument('--provision_net',
                         dest='provision_net',
-                        default='undercloud',
+                        default='provision',
                         help='Provisioning network name')
     args = parser.parse_args()
 
