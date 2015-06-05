@@ -3,7 +3,7 @@
 set -eux
 set -o pipefail
 
-yum install -y gcc python-devel libvirt-devel python-novaclient git libxslt-devel
+yum install -y gcc python-devel libvirt-devel python-novaclient git libxslt-devel jq
 
 mkdir -p /opt/stack
 cd /opt/stack
