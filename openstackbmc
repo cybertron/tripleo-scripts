@@ -58,7 +58,8 @@ class OpenStackBmc(bmc.Bmc):
             self.novaclient.servers.get(instance)
             self.instance = instance
         except exceptions.NotFound:
-            i = self.novaclient.servers.list(search_opts={'name': instance})
+            name_regex = '^%s$' % instance
+            i = self.novaclient.servers.list(search_opts={'name': name_regex})
             if len(i) > 1:
                 print 'Ambiguous instance name %s' % instance
                 sys.exit(1)
