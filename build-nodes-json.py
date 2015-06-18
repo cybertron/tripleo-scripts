@@ -60,6 +60,9 @@ def main():
     baremetals = nova.servers.list(search_opts={'name': baremetal_base + '_.*'})
     bmcs = sorted(bmcs, key=lambda x: x.name)
     baremetals = sorted(baremetals, key=lambda x: x.name)
+    if len(bmcs) != len(baremetals):
+        raise RuntimeException('Found different numbers of baremetal and '
+                               'bmc vms.')
     nodes = []
 
     for pair in zip(bmcs, baremetals):
