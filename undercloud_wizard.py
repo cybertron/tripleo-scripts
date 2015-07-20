@@ -196,13 +196,13 @@ class MainForm(QtGui.QMainWindow):
         dhcp_end = dhcp_start + node_count + self.virtual_ips - 1
         discovery_start = dhcp_end + 1
         discovery_end = discovery_start + node_count - 1
-        self._update_advanced_ui(cidr_ips, dhcp_start, dhcp_end,
+        self._update_advanced_ui(cidr, cidr_ips, dhcp_start, dhcp_end,
                                  discovery_start, discovery_end)
 
-    def _update_advanced_ui(self, cidr_ips, dhcp_start, dhcp_end,
+    def _update_advanced_ui(self, cidr, cidr_ips, dhcp_start, dhcp_end,
                             discovery_start, discovery_end):
         """Method to isolate UI bits from the validation logic"""
-        self.local_ip.setText(str(cidr_ips[1]))
+        self.local_ip.setText('%s/%s' % (str(cidr_ips[1]), cidr.prefixlen))
         self.network_gateway.setText(str(cidr_ips[1]))
         self.public_vip.setText(str(cidr_ips[2]))
         self.admin_vip.setText(str(cidr_ips[3]))
@@ -237,7 +237,8 @@ class MainForm(QtGui.QMainWindow):
                            (name, params[name], cidr))
                 self._invalid_configuration(message)
 
-        validate_addr_in_cidr(params, 'local_ip')
+        params['just_local_ip'] = params['local_ip'].split('/')[0]
+        validate_addr_in_cidr(params, 'just_local_ip')
         validate_addr_in_cidr(params, 'network_gateway')
         validate_addr_in_cidr(params, 'public_vip')
         validate_addr_in_cidr(params, 'admin_vip')
