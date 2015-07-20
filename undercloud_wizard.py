@@ -74,7 +74,7 @@ class MainForm(QtGui.QMainWindow):
 
         basic_group = QtGui.QGroupBox('Basic Settings')
         basic_layout = QtGui.QVBoxLayout(basic_group)
-        main_layout.addWidget(basic_group)
+        main_layout.addWidget(basic_group, 1)
 
         self.pxe_interface = QtGui.QLineEdit()
         self.pxe_interface.setText('eth1')
@@ -100,7 +100,7 @@ class MainForm(QtGui.QMainWindow):
 
         advanced_group = QtGui.QGroupBox('Advanced Settings')
         advanced_layout = QtGui.QVBoxLayout(advanced_group)
-        main_layout.addWidget(advanced_group)
+        main_layout.addWidget(advanced_group, 10)
 
         advanced_message = ('The generated defaults are intended to work for '
                             'most deployments, but any of the values below '
