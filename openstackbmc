@@ -71,25 +71,16 @@ class OpenStackBmc(bmc.Bmc):
 
     def get_boot_device(self):
         server = self.novaclient.servers.get(self.instance)
-        flavor = self.novaclient.flavors.get(server.flavor['id'])
-        have_key = 'libvirt:pxe-first' in flavor.get_keys()
-        retval = 'network' if have_key else 'hd'
+        retval = 'network' if server.metadata.get('libvirt:pxe-first') else 'hd'
         print 'Reporting boot device', retval
         return retval
 
     def set_boot_device(self, bootdevice):
-        # NOTE(bnemec): This will change the boot device for _all_ instances
-        # using the same flavor.  It is therefore recommended that each
-        # baremetal instance have its own flavor.
         server = self.novaclient.servers.get(self.instance)
-        flavor = self.novaclient.flavors.get(server.flavor['id'])
         if bootdevice == 'network':
-            keys = flavor.get_keys()
-            keys['libvirt:pxe-first'] = 1
-            flavor.set_keys(keys)
+            self.novaclient.servers.set_meta_item(server, 'libvirt:pxe-first', '1')
         else:
-            if 'libvirt:pxe-first' in flavor.get_keys():
-                flavor.unset_keys(['libvirt:pxe-first'])
+            self.novaclient.servers.set_meta_item(server, 'libvirt:pxe-first', '')
         print 'Set boot device to', bootdevice
 
     def cold_reset(self):
