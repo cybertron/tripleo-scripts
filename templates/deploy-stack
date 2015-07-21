@@ -1,3 +1,4 @@
 #!/bin/bash
 
-heat stack-create -f ./openstack-bmc.yaml -e ./env.json -e ./resource-registry.yaml baremetal
+op=${1:-create}
+heat stack-$op -f ./openstack-bmc.yaml -e ./env.json -e ./resource-registry.yaml baremetal
