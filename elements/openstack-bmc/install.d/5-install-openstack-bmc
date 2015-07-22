@@ -11,6 +11,8 @@ git clone https://github.com/cybertron/tripleo-scripts
 git clone https://git.openstack.org/stackforge/pyghmi
 
 pushd pyghmi
+# The next commit breaks us.  For the moment just roll back.
+git reset --hard 5b7bd84895d030ea06417640ebe25d81754bbb36
 pip install .
 popd
 
