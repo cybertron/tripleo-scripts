@@ -49,9 +49,9 @@ class PairWidget(QtGui.QWidget):
 
 
 class MainForm(QtGui.QMainWindow):
-    # FIXME(bnemec): Adding an arbitrary 5 to the node count, to allow
+    # FIXME(bnemec): Adding an arbitrary 10 to the node count, to allow
     # for virtual ips.  This may not be enough for some setups.
-    virtual_ips = 5
+    virtual_ips = 10
     # local_ip, public_vip, admin_vip
     undercloud_ips = 3
 
