@@ -1,7 +1,35 @@
 #!/usr/bin/env python
+# Copyright 2015 Red Hat Inc.
+#
+# Licensed under the Apache License, Version 2.0 (the "License"); you may
+# not use this file except in compliance with the License. You may obtain
+# a copy of the License at
+#
+#      http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
+# WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
+# License for the specific language governing permissions and limitations
+# under the License.
 
-# Requires PyQt4 and python-netaddr
-# sudo yum install -y PyQt4 python-netaddr
+""" Requires PyQt4 and python-netaddr
+    sudo yum install -y PyQt4 python-netaddr
+
+    A simple UI to aid in configuring an RDO Manager undercloud.conf.
+    Basic inputs are the provisioning network interface, the desired
+    provisioning network CIDR, and the total number of overcloud nodes to be
+    deployed.  It is best to overestimate the number of nodes to avoid having
+    to change IP allocation ranges later.
+
+    All values may be edited, but the tool does some basic sanity checks to
+    verify such things as all IP ranges being on the same provisioning subnet,
+    sufficient IP addresses in the provided ranges, and that no IP ranges
+    overlap.
+
+    Note that regenerating the advanced values will overwrite _all_ of the
+    values, including any that may have been customized previously.
+"""
 
 import sys
 
@@ -161,7 +189,15 @@ class MainForm(QtGui.QMainWindow):
         raise InvalidConfiguration(message)
 
     def _validate_count(self, node_count, cidr_ips, extra_ips):
-        """Verify the ips in cidr_ips are sufficient for node_count"""
+        """Verify the ips in cidr_ips are sufficient for node_count
+
+        :param node_count: The requested number of overcloud nodes.
+        :param cidr_ips: A list of all the ips defined by the provisioning
+            network cidr.
+        :param extra_ips: An integer describing the number of additional ips
+            that will be needed for the environment.  This may include things
+            like virtual ips and the undercloud ip.
+        """
         # node_count * 2 to allow for discovery range as well
         if len(cidr_ips) < node_count * 2 + extra_ips:
             message = 'Insufficient addresses available in provisioning CIDR'
@@ -201,7 +237,14 @@ class MainForm(QtGui.QMainWindow):
 
     def _update_advanced_ui(self, cidr, cidr_ips, dhcp_start, dhcp_end,
                             discovery_start, discovery_end):
-        """Method to isolate UI bits from the validation logic"""
+        """Method to isolate UI bits from the validation logic
+
+        :param cidr: A netaddr.IPNetwork object representing the provisioning
+            network.
+        :param cidr_ips: A list of netaddr.IPAddress objects generated from
+            the cidr parameter.
+        All other params are indices into the cidr_ips list.
+        """
         self.local_ip.setText('%s/%s' % (str(cidr_ips[1]), cidr.prefixlen))
         self.network_gateway.setText(str(cidr_ips[1]))
         self.public_vip.setText(str(cidr_ips[2]))
@@ -228,6 +271,11 @@ class MainForm(QtGui.QMainWindow):
         dialog.show()
 
     def _validate_config(self, params):
+        """Validate an undercloud configuration described by params
+
+        :param params: A dict containing all of the undercloud.conf option
+            names mapped to their proposed values.
+        """
         cidr = netaddr.IPNetwork(params['network_cidr'])
         cidr_ips = list(cidr)
 
