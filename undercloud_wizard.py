@@ -29,6 +29,10 @@
 
     Note that regenerating the advanced values will overwrite _all_ of the
     values, including any that may have been customized previously.
+
+    The generated configuration may be used as undercloud.conf verbatim, or
+    the values may be copied in to the sample configuration if other
+    customization not included in the UI is desired.
 """
 
 import sys
