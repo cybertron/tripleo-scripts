@@ -1,0 +1,27 @@
+heat_template_version: 2014-10-16
+
+description: >
+   Firstboot fixing of the rabbitmq open file descriptor limit.
+resources:
+  userdata:
+    type: OS::Heat::MultipartMime
+    properties:
+      parts:
+      - config: {get_resource: fix_rabbit}
+
+  fix_rabbit:
+    type: OS::Heat::SoftwareConfig
+    properties:
+      config: |
+        #!/bin/bash
+        set -eux
+        set -o pipefail
+        cat << EOF >> /etc/security/limits.conf
+        rabbitmq   hard   nofile   16384
+        rabbitmq   soft   nofile   16384
+        EOF
+
+
+outputs:
+  OS::stack_id:
+    value: {get_resource: userdata}

@@ -1,0 +1,5 @@
+resource_registry:
+  OS::TripleO::NodeUserData: fix_rabbit.yaml
+
+parameters:
+  MysqlMaxConnections: 8192
