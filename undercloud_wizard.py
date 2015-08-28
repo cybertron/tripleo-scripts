@@ -16,6 +16,9 @@
 """ Requires PyQt4 and python-netaddr
     sudo yum install -y PyQt4 python-netaddr
 
+    This is a GUI tool, and should be run on the user's workstation, not on
+    the undercloud itself.
+
     A simple UI to aid in configuring an RDO Manager undercloud.conf.
     Basic inputs are the provisioning network interface, the desired
     provisioning network CIDR, and the total number of overcloud nodes to be
