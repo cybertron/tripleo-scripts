@@ -184,7 +184,7 @@ class MainForm(QtGui.QMainWindow):
         self._used_networks['swift-storage.yaml'] = set()
 
     def _setup_ui(self):
-        self.resize(1024, 600)
+        self.resize(1024, 650)
         self.setWindowTitle('Network Isolation Template Generator')
 
         self.setCentralWidget(QtGui.QWidget())
@@ -312,6 +312,11 @@ class MainForm(QtGui.QMainWindow):
         self.external_vlan.setMaximum(4096)
         external_layout.addWidget(PairWidget('VLAN ID', self.external_vlan))
 
+        self.external_bridge = QtGui.QLineEdit()
+        self.external_bridge.setText("''")
+        external_layout.addWidget(PairWidget('Neutron Bridge',
+                                             self.external_bridge))
+
         # Internal API
         self.internal_group = QtGui.QGroupBox('Internal API')
         internal_layout = QtGui.QVBoxLayout()
@@ -414,6 +419,8 @@ class MainForm(QtGui.QMainWindow):
                 write('ExternalInterfaceDefaultRoute: %s' %
                       self.external_gateway.text())
                 write('ExternalNetworkVlanID: %d' % self.external_vlan.value())
+                write('NeutronExternalNetworkBridge: "%s"' %
+                      self.external_bridge.text())
             if self._net_used('InternalApi'):
                 write('InternalApiNetCidr: %s' % self.internal_cidr.text())
                 write('InternalApiAllocationPools: [{"start": "%s", '
@@ -466,6 +473,8 @@ class MainForm(QtGui.QMainWindow):
             network = d['network']
             self._used_networks[filename].add(network)
             del d['network']
+            # This is nonsense unless we're in a bridge
+            d.pop('primary', None)
             # TODO: Format this less horribly
             if network == 'ControlPlane':
                 d['addresses'] = [
@@ -476,7 +485,8 @@ class MainForm(QtGui.QMainWindow):
                 d['routes'] = [{'ip_netmask': '169.254.169.254/32',
                                 'next_hop': '{get_param: EC2MetadataIp}'}]
                 # HACK!  Typically non-controller nodes will need this, but
-                # it's not a safe assumption.
+                # it's not a safe assumption.  It's also not necessarily true
+                # that controller nodes don't need it.
                 if filename != 'controller.yaml':
                     d['routes'].append({'default': True,
                                         'next_hop': '{get_param: ControlPlaneDefaultRoute}'})
@@ -484,7 +494,7 @@ class MainForm(QtGui.QMainWindow):
                 d['addresses'] = [{'ip_netmask':
                                        '{get_param: ExternalIpSubnet}'}]
                 d['routes'] = [
-                    {'default': True,
+                    {'ip_netmask': '0.0.0.0/0',
                      'next_hop':
                          '{get_param: ExternalInterfaceDefaultRoute}'}]
             else:
