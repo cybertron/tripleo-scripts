@@ -208,7 +208,7 @@ class MainForm(QtGui.QMainWindow):
 
         self.node_type = QtGui.QListWidget()
         def new_item(name):
-            item = QtGui.QListWidgetItem(QtGui.QIcon('computer.png'), name)
+            item = QtGui.QListWidgetItem(QtGui.QIcon('network-server.png'), name)
             self.node_type.addItem(item)
             self._node_models[item] = QtGui.QStandardItemModel(0, 1)
         new_item('Controller')
@@ -617,7 +617,7 @@ class MainForm(QtGui.QMainWindow):
         elif self._last_selected is self.interfaces:
             current_item = get_current_item(self.interfaces)
             current_model = self._interface_models[current_item]
-            item = QtGui.QStandardItem(QtGui.QIcon('network-card.svg'),
+            item = QtGui.QStandardItem(QtGui.QIcon('network-workgroup.png'),
                                        'VLAN')
             item.setData({'type': 'vlan',
                           'vlan_id': '',
