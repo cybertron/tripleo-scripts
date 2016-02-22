@@ -530,6 +530,30 @@ class MainForm(QtGui.QMainWindow):
                       '"end": "%s"}]' % (self.internal_start.text(),
                                          self.internal_end.text()))
                 write('InternalApiNetworkVlanID: %d' % self.internal_vlan.value())
+            if self._net_used('Storage'):
+                write('StorageNetCidr: %s' % self.storage_cidr.text())
+                write('StorageAllocationPools: [{"start": "%s", '
+                      '"end": "%s"}]' % (self.storage_start.text(),
+                                         self.storage_end.text()))
+                write('StorageNetworkVlanID: %d' % self.storage_mgmt_vlan.value())
+            if self._net_used('StorageMgmt'):
+                write('StorageMgmtNetCidr: %s' % self.storage_mgmt_cidr.text())
+                write('StorageMgmtAllocationPools: [{"start": "%s", '
+                      '"end": "%s"}]' % (self.storage_mgmt_start.text(),
+                                         self.storage_mgmt_end.text()))
+                write('StorageMgmtNetworkVlanID: %d' % self.storage_mgmt_vlan.value())
+            if self._net_used('Tenant'):
+                write('TenantNetCidr: %s' % self.tenant_cidr.text())
+                write('TenantAllocationPools: [{"start": "%s", '
+                      '"end": "%s"}]' % (self.tenant_start.text(),
+                                         self.tenant_end.text()))
+                write('TenantNetworkVlanID: %d' % self.tenant_vlan.value())
+            if self._net_used('Management'):
+                write('ManagementNetCidr: %s' % self.management_cidr.text())
+                write('ManagementAllocationPools: [{"start": "%s", '
+                      '"end": "%s"}]' % (self.management_start.text(),
+                                         self.management_end.text()))
+                write('ManagementNetworkVlanID: %d' % self.management_vlan.value())
 
         with open(os.path.join(base_path,
                                'network-isolation.yaml'), 'w') as f:
