@@ -13,8 +13,7 @@
 # License for the specific language governing permissions and limitations
 # under the License.
 
-# TODO(bnemec): Include the appropriate license for the icons, or create some
-# new ones that can be Apache licensed too.
+# Icon files come from the Oxygen project.  See LICENSE for details.
 
 import copy
 import os
@@ -184,7 +183,7 @@ class MainForm(QtGui.QMainWindow):
         self._used_networks['swift-storage.yaml'] = set()
 
     def _setup_ui(self):
-        self.resize(1024, 650)
+        self.resize(1280, 650)
         self.setWindowTitle('Network Isolation Template Generator')
 
         self.setCentralWidget(QtGui.QWidget())
@@ -208,7 +207,7 @@ class MainForm(QtGui.QMainWindow):
 
         self.node_type = QtGui.QListWidget()
         def new_item(name):
-            item = QtGui.QListWidgetItem(QtGui.QIcon('network-server.png'), name)
+            item = QtGui.QListWidgetItem(QtGui.QIcon('network-server.svgz'), name)
             self.node_type.addItem(item)
             self._node_models[item] = QtGui.QStandardItemModel(0, 1)
         new_item('Controller')
@@ -269,12 +268,12 @@ class MainForm(QtGui.QMainWindow):
         self.control_mask.setMinimum(8)
         self.control_mask.setMaximum(31)
         self.control_mask.setValue(24)
-        control_layout.addWidget(PairWidget('Subnet Mask Length',
+        control_layout.addWidget(PairWidget('Mask Length',
                                             self.control_mask))
 
         self.control_route = QtGui.QLineEdit()
         self.control_route.setText('192.0.2.1')
-        control_layout.addWidget(PairWidget('Default Gateway',
+        control_layout.addWidget(PairWidget('Gateway',
                                             self.control_route))
 
         self.control_ec2 = QtGui.QLineEdit()
@@ -294,12 +293,12 @@ class MainForm(QtGui.QMainWindow):
 
         self.external_start = QtGui.QLineEdit()
         self.external_start.setText('10.0.0.10')
-        external_layout.addWidget(PairWidget('Range Start',
+        external_layout.addWidget(PairWidget('IP Start',
                                              self.external_start))
 
         self.external_end = QtGui.QLineEdit()
         self.external_end.setText('10.0.0.50')
-        external_layout.addWidget(PairWidget('Range End',
+        external_layout.addWidget(PairWidget('IP End',
                                              self.external_end))
 
         self.external_gateway = QtGui.QLineEdit()
@@ -329,12 +328,12 @@ class MainForm(QtGui.QMainWindow):
 
         self.internal_start = QtGui.QLineEdit()
         self.internal_start.setText('172.17.0.10')
-        internal_layout.addWidget(PairWidget('Range Start',
+        internal_layout.addWidget(PairWidget('IP Start',
                                              self.internal_start))
 
         self.internal_end = QtGui.QLineEdit()
         self.internal_end.setText('172.17.0.250')
-        internal_layout.addWidget(PairWidget('Range End',
+        internal_layout.addWidget(PairWidget('IP End',
                                              self.internal_end))
 
         self.internal_vlan = QtGui.QSpinBox()
@@ -342,6 +341,110 @@ class MainForm(QtGui.QMainWindow):
         self.internal_vlan.setMaximum(4096)
         self.internal_vlan.setValue(2)
         internal_layout.addWidget(PairWidget('VLAN ID', self.internal_vlan))
+
+        # Storage
+        self.storage_group = QtGui.QGroupBox('Storage')
+        storage_layout = QtGui.QVBoxLayout()
+        self.storage_group.setLayout(storage_layout)
+        params_layout.addWidget(self.storage_group)
+
+        self.storage_cidr = QtGui.QLineEdit()
+        self.storage_cidr.setText('172.18.0.0/24')
+        storage_layout.addWidget(PairWidget('CIDR', self.storage_cidr))
+
+        self.storage_start = QtGui.QLineEdit()
+        self.storage_start.setText('172.18.0.10')
+        storage_layout.addWidget(PairWidget('IP Start',
+                                             self.storage_start))
+
+        self.storage_end = QtGui.QLineEdit()
+        self.storage_end.setText('172.18.0.250')
+        storage_layout.addWidget(PairWidget('IP End',
+                                             self.storage_end))
+
+        self.storage_vlan = QtGui.QSpinBox()
+        self.storage_vlan.setMinimum(1)
+        self.storage_vlan.setMaximum(4096)
+        self.storage_vlan.setValue(3)
+        storage_layout.addWidget(PairWidget('VLAN ID', self.storage_vlan))
+
+        # Storage Mgmt
+        self.storage_mgmt_group = QtGui.QGroupBox('Storage Mgmt')
+        storage_mgmt_layout = QtGui.QVBoxLayout()
+        self.storage_mgmt_group.setLayout(storage_mgmt_layout)
+        params_layout.addWidget(self.storage_mgmt_group)
+
+        self.storage_mgmt_cidr = QtGui.QLineEdit()
+        self.storage_mgmt_cidr.setText('172.19.0.0/24')
+        storage_mgmt_layout.addWidget(PairWidget('CIDR', self.storage_mgmt_cidr))
+
+        self.storage_mgmt_start = QtGui.QLineEdit()
+        self.storage_mgmt_start.setText('172.19.0.10')
+        storage_mgmt_layout.addWidget(PairWidget('IP Start',
+                                             self.storage_mgmt_start))
+
+        self.storage_mgmt_end = QtGui.QLineEdit()
+        self.storage_mgmt_end.setText('172.19.0.250')
+        storage_mgmt_layout.addWidget(PairWidget('IP End',
+                                             self.storage_mgmt_end))
+
+        self.storage_mgmt_vlan = QtGui.QSpinBox()
+        self.storage_mgmt_vlan.setMinimum(1)
+        self.storage_mgmt_vlan.setMaximum(4096)
+        self.storage_mgmt_vlan.setValue(4)
+        storage_mgmt_layout.addWidget(PairWidget('VLAN ID', self.storage_mgmt_vlan))
+
+        # Tenant
+        self.tenant_group = QtGui.QGroupBox('Tenant')
+        tenant_layout = QtGui.QVBoxLayout()
+        self.tenant_group.setLayout(tenant_layout)
+        params_layout.addWidget(self.tenant_group)
+
+        self.tenant_cidr = QtGui.QLineEdit()
+        self.tenant_cidr.setText('172.16.0.0/24')
+        tenant_layout.addWidget(PairWidget('CIDR', self.tenant_cidr))
+
+        self.tenant_start = QtGui.QLineEdit()
+        self.tenant_start.setText('172.16.0.10')
+        tenant_layout.addWidget(PairWidget('IP Start',
+                                             self.tenant_start))
+
+        self.tenant_end = QtGui.QLineEdit()
+        self.tenant_end.setText('172.16.0.250')
+        tenant_layout.addWidget(PairWidget('IP End',
+                                             self.tenant_end))
+
+        self.tenant_vlan = QtGui.QSpinBox()
+        self.tenant_vlan.setMinimum(1)
+        self.tenant_vlan.setMaximum(4096)
+        self.tenant_vlan.setValue(5)
+        tenant_layout.addWidget(PairWidget('VLAN ID', self.tenant_vlan))
+
+        # Management
+        self.management_group = QtGui.QGroupBox('Management')
+        management_layout = QtGui.QVBoxLayout()
+        self.management_group.setLayout(management_layout)
+        params_layout.addWidget(self.management_group)
+
+        self.management_cidr = QtGui.QLineEdit()
+        self.management_cidr.setText('172.20.0.0/24')
+        management_layout.addWidget(PairWidget('CIDR', self.management_cidr))
+
+        self.management_start = QtGui.QLineEdit()
+        self.management_start.setText('172.20.0.10')
+        management_layout.addWidget(PairWidget('IP Start',
+                                             self.management_start))
+
+        self.management_end = QtGui.QLineEdit()
+        self.management_end.setText('172.20.0.250')
+        management_layout.addWidget(PairWidget('IP End',
+                                             self.management_end))
+
+        self.management_vlan = QtGui.QSpinBox()
+        self.management_vlan.setMinimum(1)
+        self.management_vlan.setMaximum(4096)
+        self.management_vlan.setValue(6)
+        management_layout.addWidget(PairWidget('VLAN ID', self.management_vlan))
 
         generate = QtGui.QPushButton('Generate')
         generate.clicked.connect(self._generate_templates)
@@ -597,7 +700,7 @@ class MainForm(QtGui.QMainWindow):
             current_item = self.node_type.currentItem()
             current_model = self._node_models[current_item]
             bridge_name = 'br-ex'
-            item = QtGui.QStandardItem(QtGui.QIcon('bridge.png'), bridge_name)
+            item = QtGui.QStandardItem(QtGui.QIcon('bridge.svgz'), bridge_name)
             item.setData({'type': 'ovs_bridge',
                           'name': bridge_name,
                           'use_dhcp': False,
@@ -617,7 +720,7 @@ class MainForm(QtGui.QMainWindow):
         elif self._last_selected is self.interfaces:
             current_item = get_current_item(self.interfaces)
             current_model = self._interface_models[current_item]
-            item = QtGui.QStandardItem(QtGui.QIcon('network-workgroup.png'),
+            item = QtGui.QStandardItem(QtGui.QIcon('network-workgroup.svgz'),
                                        'VLAN')
             item.setData({'type': 'vlan',
                           'vlan_id': '',
