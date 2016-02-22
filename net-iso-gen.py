@@ -143,7 +143,7 @@ def get_current_item(model):
 
 
 class PairWidget(QtGui.QWidget):
-    def __init__(self, label, widget, parent = None):
+    def __init__(self, label, widget, parent=None):
         super(PairWidget, self).__init__(parent)
 
         self.layout = QtGui.QHBoxLayout(self)
@@ -158,6 +158,27 @@ class PairWidget(QtGui.QWidget):
 
         self.widget = widget
         self.layout.addWidget(self.widget)
+
+
+class NetworkListView(QtGui.QListView):
+    focused = QtCore.pyqtSignal()
+    current_changed = QtCore.pyqtSignal(QtCore.QModelIndex)
+    def __init__(self, parent=None):
+        super(NetworkListView, self).__init__(parent)
+
+    def focusInEvent(self, event):
+        self.focused.emit()
+
+    def currentChanged(self, current, old):
+        self.current_changed.emit(current)
+
+class NetworkListWidget(QtGui.QListWidget):
+    focused = QtCore.pyqtSignal()
+    def __init__(self, parent=None):
+        super(NetworkListWidget, self).__init__(parent)
+
+    def focusInEvent(self, event):
+        self.focused.emit()
 
 
 class MainForm(QtGui.QMainWindow):
@@ -205,7 +226,7 @@ class MainForm(QtGui.QMainWindow):
         pane_layout = QtGui.QHBoxLayout()
         main_layout.addLayout(pane_layout)
 
-        self.node_type = QtGui.QListWidget()
+        self.node_type = NetworkListWidget()
         def new_item(name):
             item = QtGui.QListWidgetItem(QtGui.QIcon('network-server.svgz'), name)
             self.node_type.addItem(item)
@@ -217,18 +238,21 @@ class MainForm(QtGui.QMainWindow):
         new_item('Swift')
         self.node_type.setIconSize(QtCore.QSize(64, 64))
         self.node_type.currentRowChanged.connect(self._node_type_changed)
+        self.node_type.focused.connect(self._node_type_focused)
         pane_layout.addWidget(self.node_type, 100)
 
-        self.interfaces = QtGui.QListView()
+        self.interfaces = NetworkListView()
         self.interfaces.setIconSize(QtCore.QSize(64, 64))
         # Can't do this before self.interfaces exists
         self.node_type.setCurrentRow(0)
-        self.interfaces.clicked.connect(self._interface_clicked)
+        self.interfaces.current_changed.connect(self._interface_changed)
+        self.interfaces.focused.connect(self._interface_focused)
         pane_layout.addWidget(self.interfaces, 100)
 
-        self.nested_interfaces = QtGui.QListView()
+        self.nested_interfaces = NetworkListView()
         self.nested_interfaces.setIconSize(QtCore.QSize(64, 64))
-        self.nested_interfaces.clicked.connect(self._nested_clicked)
+        self.nested_interfaces.current_changed.connect(self._nested_changed)
+        self.nested_interfaces.focused.connect(self._nested_focused)
         pane_layout.addWidget(self.nested_interfaces, 100)
 
         input_layout = QtGui.QVBoxLayout()
@@ -651,20 +675,27 @@ class MainForm(QtGui.QMainWindow):
     def _node_type_changed(self, index):
         self.interfaces.setModel(
             self._node_models[self.node_type.currentItem()])
+        self.nested_interfaces.setModel(QtGui.QStandardItemModel(0, 1))
+
+    def _node_type_focused(self):
         self._last_selected = self.node_type
 
-    def _interface_clicked(self, index):
+    def _interface_changed(self, index):
         row = index.row()
         item = index.model().item(row)
         self.nested_interfaces.setModel(self._interface_models[item])
-        self._last_selected = self.interfaces
         self._update_input(item)
 
-    def _nested_clicked(self, index):
+    def _interface_focused(self):
+        self._last_selected = self.interfaces
+
+    def _nested_changed(self, index):
         row = index.row()
         item = index.model().item(row)
-        self._last_selected = self.nested_interfaces
         self._update_input(item)
+
+    def _nested_focused(self):
+        self._last_selected = self.nested_interfaces
 
     def _next_nic_name(self):
         current_item = self.node_type.currentItem()
