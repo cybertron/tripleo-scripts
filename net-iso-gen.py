@@ -662,7 +662,7 @@ class MainForm(QtGui.QMainWindow):
                 item = current_model.item(i)
                 nested = self._interface_models[item]
                 for j in range(nested.rowCount()):
-                    nd = nested.item(i).data()
+                    nd = nested.item(j).data()
                     next_nic_num = calculate_from_data(nd, next_nic_num)
         nic_name = 'nic%d' % next_nic_num
         return nic_name
