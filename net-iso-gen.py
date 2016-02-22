@@ -221,6 +221,9 @@ class MainForm(QtGui.QMainWindow):
         add_vlan = QtGui.QPushButton('Add VLAN')
         add_vlan.clicked.connect(self._add_vlan)
         button_layout.addWidget(add_vlan)
+        delete = QtGui.QPushButton('Delete')
+        delete.clicked.connect(self._delete_current)
+        button_layout.addWidget(delete)
         main_layout.addLayout(button_layout)
 
         pane_layout = QtGui.QHBoxLayout()
@@ -682,17 +685,21 @@ class MainForm(QtGui.QMainWindow):
 
     def _interface_changed(self, index):
         row = index.row()
-        item = index.model().item(row)
-        self.nested_interfaces.setModel(self._interface_models[item])
-        self._update_input(item)
+        if row >= 0:
+            item = index.model().item(row)
+            self.nested_interfaces.setModel(self._interface_models[item])
+            self._update_input(item)
+        else:
+            self.nested_interfaces.setModel(QtGui.QStandardItemModel(0, 1))
 
     def _interface_focused(self):
         self._last_selected = self.interfaces
 
     def _nested_changed(self, index):
         row = index.row()
-        item = index.model().item(row)
-        self._update_input(item)
+        if row >= 0:
+            item = index.model().item(row)
+            self._update_input(item)
 
     def _nested_focused(self):
         self._last_selected = self.nested_interfaces
@@ -749,6 +756,9 @@ class MainForm(QtGui.QMainWindow):
             nic_name = self._next_nic_name()
             item = self._new_nic_item(nic_name)
             current_model.appendRow(item)
+        else:
+            raise RuntimeError('Can only add interfaces to top-level nodes '
+                               'and bridges.')
 
     def _add_bridge(self):
         if self._last_selected is self.node_type:
@@ -767,6 +777,8 @@ class MainForm(QtGui.QMainWindow):
                           })
             self._interface_models[item] = QtGui.QStandardItemModel(0, 1)
             current_model.appendRow(item)
+        else:
+            raise RuntimeError('Can only add bridges to top-level nodes')
 
     def _add_vlan(self):
         if self._last_selected is self.node_type:
@@ -786,6 +798,19 @@ class MainForm(QtGui.QMainWindow):
                           })
             self._interface_models[item] = QtGui.QStandardItemModel(0, 1)
             current_model.appendRow(item)
+        else:
+            raise RuntimeError('Can only add VLANs to top-level nodes and '
+                               'bridges')
+
+    def _delete_current(self):
+        if self._last_selected is self.node_type:
+            raise RuntimeError('Cannot delete top-level node type')
+        elif self._last_selected is self.interfaces:
+            current_index = self.interfaces.currentIndex()
+            current_index.model().takeRow(current_index.row())
+        elif self._last_selected is self.nested_interfaces:
+            current_index = self.nested_interfaces.currentIndex()
+            current_index.model().takeRow(current_index.row())
 
     def _update_input(self, item):
         d = item.data()
@@ -817,7 +842,12 @@ class MainForm(QtGui.QMainWindow):
             d['primary'] = self.primary.isChecked()
             current_item.setData(d)
         else:
-            raise RuntimeError('Cannot set primary on top-level interfaces')
+            # This should be a RuntimeError, but right now we don't
+            # differentiate properly between when this changes due to user
+            # input and when it's changed programmatically, which causes
+            # this error to be raised incorrectly.
+            pass
+            #raise RuntimeError('Cannot set primary on top-level interfaces')
 
     def _name_changed(self, text):
         if self._last_selected is self.interfaces:
