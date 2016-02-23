@@ -316,6 +316,7 @@ def _process_bridge_members(nd):
 def _validate_config(data, global_data):
     _check_duplicate_vlans(data, global_data)
     _check_duplicate_networks(data)
+    # TODO(bnemec): Check for conflicting cidrs
 
 def _lower_to_camel(lower):
     result = [i[0] for i in ALL_NETS if i[1] == lower]
@@ -329,7 +330,7 @@ def _check_duplicate_vlans(data, global_data):
         try:
             used = _net_used_all(data, _lower_to_camel(name))
             if d['vlan'] in seen and used:
-                raise RuntimeError('Duplicate VLAN found')
+                raise RuntimeError('Duplicate VLAN found: %s' % d['vlan'])
             if used:
                 seen.add(d['vlan'])
         except (TypeError, KeyError, IndexError):
@@ -347,3 +348,13 @@ def _check_duplicate_networks(data):
                     raise RuntimeError(err_msg % (j['network'], filename))
                 seen.add(j['network'])
             seen.add(i['network'])
+
+def _load(base_path):
+    nic_data = pickle.load(open(os.path.join(base_path,
+                                             'nic-configs.pickle'), 'rb'))
+    global_data = pickle.load(open(os.path.join(base_path,
+                                                'global.pickle'), 'rb'))
+    return nic_data, global_data
+
+def _index_from_filename(filename):
+    return [i[0] for i in TYPE_LIST if i[1] == filename][0]

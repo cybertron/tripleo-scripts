@@ -372,6 +372,10 @@ class MainForm(QtGui.QMainWindow):
         set_path.clicked.connect(self._set_output_path)
         generate_layout.addWidget(set_path, 1)
 
+        load = QtGui.QPushButton('Load Existing')
+        load.clicked.connect(self._load)
+        generate_layout.addWidget(load, 1)
+
         generate = QtGui.QPushButton('Generate')
         generate.clicked.connect(self._generate_templates)
         generate_layout.addWidget(generate, 3)
@@ -398,6 +402,42 @@ class MainForm(QtGui.QMainWindow):
                         d['members'].append(nd)
                 retval[filename].append(d)
         return retval
+
+    def _dict_to_ui(self, data):
+        self._interface_models = {}
+        self._last_selected = None
+        # Initialize all node models
+        for i in range(self.node_type.count()):
+            current_item = self.node_type.item(i)
+            self._node_models[current_item] = QtGui.QStandardItemModel(0, 1)
+        print data
+        for filename, all_data in data.items():
+            index = net_processing._index_from_filename(filename)
+            current_model = self._node_models[self.node_type.item(index)]
+            for d in all_data:
+                new_data = copy.deepcopy(d)
+                new_data.pop('members', None)
+                item = QtGui.QStandardItem()
+                if d['type'] == 'interface':
+                    item.setIcon(QtGui.QIcon('network-wired.png'))
+                elif d['type'] == 'ovs_bridge':
+                    item.setIcon(QtGui.QIcon('bridge.svgz'))
+                elif i['type'] == 'vlan':
+                    nested_item.setIcon(QtGui.QIcon('network-workgroup.svgz'))
+                item.setText(d['name'])
+                item.setData(new_data)
+                self._add_item(item, current_model, self._interface_models)
+
+                nested_model = self._interface_models[item]
+                for i in d['members']:
+                    nested_item = QtGui.QStandardItem()
+                    if i['type'] == 'interface':
+                        nested_item.setIcon(QtGui.QIcon('network-wired.png'))
+                    elif i['type'] == 'vlan':
+                        nested_item.setIcon(QtGui.QIcon('network-workgroup.svgz'))
+                    nested_item.setText(i['name'])
+                    nested_item.setData(i)
+                    self._add_item(nested_item, nested_model)
 
     def _global_to_dict(self):
         """Convert the global UI data to a dict
@@ -426,6 +466,23 @@ class MainForm(QtGui.QMainWindow):
             retval[net]['vlan'] = getattr(self, '%s_vlan' % net).value()
         return retval
 
+    def _dict_to_global(self, data):
+        # If/when there are data changes, we'll need to check the version here
+        self.control_mask.setValue(data['control']['mask'])
+        self.control_route.setText(data['control']['route'])
+        self.control_ec2.setText(data['control']['ec2'])
+        self.external_cidr.setText(data['external']['cidr'])
+        self.external_start.setText(data['external']['start'])
+        self.external_end.setText(data['external']['end'])
+        self.external_gateway.setText(data['external']['gateway'])
+        self.external_vlan.setValue(data['external']['vlan'])
+        self.external_bridge.setText(data['external']['bridge'])
+        for _, net in net_processing.SIMILAR_NETS:
+            getattr(self, '%s_cidr' % net).setText(data[net]['cidr'])
+            getattr(self, '%s_start' % net).setText(data[net]['start'])
+            getattr(self, '%s_end' % net).setText(data[net]['end'])
+            getattr(self, '%s_vlan' % net).setValue(data[net]['vlan'])
+
     def _generate_templates(self):
         base_path = self.base_path.text()
 
@@ -448,6 +505,15 @@ class MainForm(QtGui.QMainWindow):
             'Select Output Directory', self.base_path.text())
         if new_path:
             self.base_path.setText(new_path)
+
+    def _load(self):
+        load_path = QtGui.QFileDialog.getExistingDirectory(self,
+            'Select Previously Generated Directory', self.base_path.text())
+        if load_path:
+            self.base_path.setText(load_path)
+            data, global_data = net_processing._load(load_path)
+            self._dict_to_ui(data)
+            self._dict_to_global(global_data)
 
     def _node_type_changed(self, index):
         self.interfaces.setModel(
@@ -524,17 +590,21 @@ class MainForm(QtGui.QMainWindow):
             current_model = self._node_models[current_item]
             nic_name = self._next_nic_name()
             item = self._new_nic_item(nic_name)
-            self._interface_models[item] = QtGui.QStandardItemModel(0, 1)
-            current_model.appendRow(item)
+            self._add_item(item, current_model, self._interface_models)
         elif self._last_selected is self.interfaces:
             current_item = get_current_item(self.interfaces)
             current_model = self._interface_models[current_item]
             nic_name = self._next_nic_name()
             item = self._new_nic_item(nic_name, 'None')
-            current_model.appendRow(item)
+            self._add_item(item, current_model)
         else:
             raise RuntimeError('Can only add interfaces to top-level nodes '
                                'and bridges.')
+
+    def _add_item(self, item, model, submodels=None):
+        if submodels is not None:
+            submodels[item] = QtGui.QStandardItemModel(0, 1)
+        model.appendRow(item)
 
     def _add_bridge(self):
         if self._last_selected is self.node_type:
@@ -551,8 +621,7 @@ class MainForm(QtGui.QMainWindow):
                           'members': [],
                           'network': 'None',
                           })
-            self._interface_models[item] = QtGui.QStandardItemModel(0, 1)
-            current_model.appendRow(item)
+            self._add_item(item, current_model, self._interface_models)
         else:
             raise RuntimeError('Can only add bridges to top-level nodes')
 
@@ -572,7 +641,6 @@ class MainForm(QtGui.QMainWindow):
                           'network': 'External',
                           'name': 'VLAN',
                           })
-            self._interface_models[item] = QtGui.QStandardItemModel(0, 1)
             current_model.appendRow(item)
         else:
             raise RuntimeError('Can only add VLANs to top-level nodes and '
