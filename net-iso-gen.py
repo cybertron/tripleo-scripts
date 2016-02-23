@@ -30,98 +30,6 @@ from PyQt4 import QtGui
 import net_processing
 
 
-PARAMS = """heat_template_version: 2015-04-30
-
-parameters:
-  ControlPlaneIp:
-    default: ''
-    description: IP address/subnet on the ctlplane network
-    type: string
-  ExternalIpSubnet:
-    default: ''
-    description: IP address/subnet on the external network
-    type: string
-  InternalApiIpSubnet:
-    default: ''
-    description: IP address/subnet on the internal API network
-    type: string
-  StorageIpSubnet:
-    default: ''
-    description: IP address/subnet on the storage network
-    type: string
-  StorageMgmtIpSubnet:
-    default: ''
-    description: IP address/subnet on the storage mgmt network
-    type: string
-  TenantIpSubnet:
-    default: ''
-    description: IP address/subnet on the tenant network
-    type: string
-  ManagementIpSubnet: # Only populated when including environments/network-management.yaml
-    default: ''
-    description: IP address/subnet on the management network
-    type: string
-  ExternalNetworkVlanID:
-    default: 10
-    description: Vlan ID for the external network traffic.
-    type: number
-  InternalApiNetworkVlanID:
-    default: 20
-    description: Vlan ID for the internal_api network traffic.
-    type: number
-  StorageNetworkVlanID:
-    default: 30
-    description: Vlan ID for the storage network traffic.
-    type: number
-  StorageMgmtNetworkVlanID:
-    default: 40
-    description: Vlan ID for the storage mgmt network traffic.
-    type: number
-  TenantNetworkVlanID:
-    default: 50
-    description: Vlan ID for the tenant network traffic.
-    type: number
-  ManagementNetworkVlanID:
-    default: 60
-    description: Vlan ID for the management network traffic.
-    type: number
-  ExternalInterfaceDefaultRoute:
-    default: '10.0.0.1'
-    description: default route for the external network
-    type: string
-  ControlPlaneSubnetCidr: # Override this via parameter_defaults
-    default: '24'
-    description: The subnet CIDR of the control plane network.
-    type: string
-  ControlPlaneDefaultRoute: # Override this via parameter_defaults
-    description: The default route of the control plane network.
-    type: string
-  DnsServers: # Override this via parameter_defaults
-    default: []
-    description: A list of DNS servers (2 max for some implementations) that will be added to resolv.conf.
-    type: comma_delimited_list
-  EC2MetadataIp: # Override this via parameter_defaults
-    description: The IP address of the EC2 metadata server.
-    type: string
-
-"""
-BASE_RESOURCE_YAML = """
-resources:
-  OsNetConfigImpl:
-    type: OS::Heat::StructuredConfig
-    properties:
-      group: os-apply-config
-      config:
-        os_net_config:
-          network_config:
-"""
-BASE_RESOURCE = yaml.safe_load(BASE_RESOURCE_YAML)
-OUTPUTS = """
-outputs:
-  OS::stack_id:
-    description: The OsNetConfigImpl resource.
-    value: {get_resource: OsNetConfigImpl}
-"""
 NETENV_HEADER = """
 resource_registry:
   OS::TripleO::BlockStorage::Net::SoftwareConfig: nic-configs/cinder-storage.yaml
@@ -488,54 +396,20 @@ class MainForm(QtGui.QMainWindow):
                 retval[filename].append(d)
         return retval
 
-    # This whole function should probably be moved to net_processing, but it
-    # has an unfortunate amount of direct usage of the UI elements right now.
     def _generate_templates(self):
         # FIXME(bnemec): Make this path configurable
         base_path = '/tmp/templates'
-        nic_path = os.path.join(base_path, 'nic-configs')
-        try:
-            os.mkdir(base_path)
-        except OSError:
-            pass
-        try:
-            os.mkdir(nic_path)
-        except OSError:
-            pass
-
-        def new_resource():
-            resources = copy.deepcopy(BASE_RESOURCE)
-            network_config = resources['resources']['OsNetConfigImpl']
-            network_config = network_config['properties']['config']
-            network_config = network_config['os_net_config']
-            network_config['network_config'] = []
-            network_config = network_config['network_config']
-            return (resources, network_config)
 
         data = self._ui_to_dict()
-        for filename, node_data in data.items():
-            with open(os.path.join(nic_path, filename), 'w') as f:
-                f.write(PARAMS)
-                resources, network_config = new_resource()
-                for i in node_data:
-                    net_processing._process_network_config(i, filename)
-                    for j in i['members']:
-                        net_processing._process_bridge_members(j)
-                    network_config.append(i)
-                resource_string = yaml.safe_dump(resources,
-                                                 default_flow_style=False)
-                # Ugly hack to remove unwanted quoting around get_params
-                resource_string = resource_string.replace(
-                    "'{get_param:", "{get_param:")
-                resource_string = resource_string.replace("}'", "}")
-                f.write(resource_string)
-                f.write(OUTPUTS)
+        net_processing._write_nic_configs(data, base_path)
 
         # We need a fresh, unmolested copy of the dict for the following steps
         data = self._ui_to_dict()
         # This is simple YAML, so instead of generating it with the yaml
         # module, we'll just write it directly as text so we control the
         # formatting.
+        # This should all be moved to net_processing, but unfortunately
+        # there's a lot of direct UI element usage right now.
         with open(os.path.join(base_path,
                                'network-environment.yaml'), 'w') as f:
             def write(content):
@@ -588,22 +462,7 @@ class MainForm(QtGui.QMainWindow):
                                          self.management_end.text()))
                 write('ManagementNetworkVlanID: %d' % self.management_vlan.value())
 
-        with open(os.path.join(base_path,
-                               'network-isolation.yaml'), 'w') as f:
-            def write(content):
-                f.write('  ' + content + '\n')
-            f.write('resource_registry:\n')
-            # When should these be included?
-            #write('OS::TripleO::Network::Ports::RedisVipPort: '
-                  #'../network/ports/vip.yaml')
-            #write('OS::TripleO::Controller::Ports::RedisVipPort: '
-                  #'../network/ports/vip.yaml')
-            net_processing._write_net_iso(f, 'External', data)
-            net_processing._write_net_iso(f, 'InternalApi', data, 'internal_api')
-            net_processing._write_net_iso(f, 'Storage', data)
-            net_processing._write_net_iso(f, 'StorageMgmt', data, 'storage_mgmt')
-            net_processing._write_net_iso(f, 'Tenant', data)
-            net_processing._write_net_iso(f, 'Management', data)
+        net_process._write_net_iso(data, base_path)
 
     def _node_type_changed(self, index):
         self.interfaces.setModel(
