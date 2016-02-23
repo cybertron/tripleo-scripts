@@ -438,6 +438,7 @@ class MainForm(QtGui.QMainWindow):
                     nested_item.setText(i['name'])
                     nested_item.setData(i)
                     self._add_item(nested_item, nested_model)
+        self._node_type_changed(None)
 
     def _global_to_dict(self):
         """Convert the global UI data to a dict
