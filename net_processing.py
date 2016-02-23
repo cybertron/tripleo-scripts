@@ -14,6 +14,7 @@
 
 import copy
 import os
+import pickle
 import yaml
 
 PARAMS = """heat_template_version: 2015-04-30
@@ -163,7 +164,14 @@ def _write_nic_configs(data, base_path):
             f.write(resource_string)
             f.write(OUTPUTS)
 
+def _write_pickle(data, global_data, base_path):
+    pickle.dump(data, open(os.path.join(base_path,
+                                        'nic-configs.pickle'), 'wb'))
+    pickle.dump(global_data, open(os.path.join(base_path,
+                                               'global.pickle'), 'wb'))
+
 def _write_net_env(data, global_data, base_path):
+    _write_pickle(data, global_data, base_path)
     # This is simple YAML, so instead of generating it with the yaml
     # module, we'll just write it directly as text so we control the
     # formatting.

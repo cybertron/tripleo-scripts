@@ -30,6 +30,10 @@ from PyQt4 import QtGui
 import net_processing
 
 
+DATA_MAJOR = 0
+DATA_MINOR = 1
+
+
 def get_current_item(model):
     current_index = model.currentIndex()
     return current_index.model().item(current_index.row())
@@ -400,6 +404,8 @@ class MainForm(QtGui.QMainWindow):
         :return: dict representing the current global UI state
         """
         retval = {}
+        retval['major'] = DATA_MAJOR
+        retval['minor'] = DATA_MINOR
         retval['control'] = {}
         retval['control']['mask'] = self.control_mask.value()
         retval['control']['route'] = self.control_route.text()
