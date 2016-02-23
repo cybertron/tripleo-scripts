@@ -108,7 +108,16 @@ outputs:
     description: The OsNetConfigImpl resource.
     value: {get_resource: OsNetConfigImpl}
 """
+NETENV_HEADER = """
+resource_registry:
+  OS::TripleO::BlockStorage::Net::SoftwareConfig: nic-configs/cinder-storage.yaml
+  OS::TripleO::Compute::Net::SoftwareConfig: nic-configs/compute.yaml
+  OS::TripleO::Controller::Net::SoftwareConfig: nic-configs/controller.yaml
+  OS::TripleO::ObjectStorage::Net::SoftwareConfig: nic-configs/swift-storage.yaml
+  OS::TripleO::CephStorage::Net::SoftwareConfig: nic-configs/ceph-storage.yaml
 
+parameter_defaults:
+"""
 TYPE_LIST = [(0, 'controller.yaml', 'Controller'),
              (1, 'compute.yaml', 'Compute'),
              (2, 'ceph-storage.yaml', 'CephStorage'),
@@ -153,6 +162,46 @@ def _write_nic_configs(data, base_path):
             resource_string = resource_string.replace("}'", "}")
             f.write(resource_string)
             f.write(OUTPUTS)
+
+def _write_net_env(data, global_data, base_path):
+    # This is simple YAML, so instead of generating it with the yaml
+    # module, we'll just write it directly as text so we control the
+    # formatting.
+    with open(os.path.join(base_path,
+                            'network-environment.yaml'), 'w') as f:
+        def write(content):
+            f.write('  ' + content + '\n')
+        f.write(NETENV_HEADER)
+        if _net_used_all(data, 'ControlPlane'):
+            write("ControlPlaneSubnetCidr: '%d'" %
+                  global_data['control']['mask'])
+            write('ControlPlaneDefaultRoute: %s' %
+                  global_data['control']['route'])
+            write('EC2MetadataIp: %s' % global_data['control']['ec2'])
+        if _net_used_all(data, 'External'):
+            write('ExternalNetCidr: %s' % global_data['external']['cidr'])
+            write('ExternalAllocationPools: [{"start": "%s", '
+                  '"end": "%s"}]' % (global_data['external']['start'],
+                                     global_data['external']['end']))
+            write('ExternalInterfaceDefaultRoute: %s' %
+                  global_data['external']['gateway'])
+            write('ExternalNetworkVlanID: %d' % global_data['external']['vlan'])
+            write('NeutronExternalNetworkBridge: "%s"' %
+                  global_data['external']['bridge'])
+        for lower, camel in [('internal', 'InternalApi'),
+                             ('storage', 'Storage'),
+                             ('storage_mgmt', 'StorageMgmt'),
+                             ('tenant', 'Tenant'),
+                             ('management', 'Management'),
+                             ]:
+            if _net_used_all(data, camel):
+                write('%sNetCidr: %s' % (camel, global_data[lower]['cidr']))
+                write('%sAllocationPools: [{"start": "%s", '
+                    '"end": "%s"}]' % (camel,
+                                       global_data[lower]['start'],
+                                       global_data[lower]['end']))
+                write('%sNetworkVlanID: %d' % (camel,
+                                               global_data[lower]['vlan']))
 
 def _write_net_iso(data, base_path):
     with open(os.path.join(base_path,

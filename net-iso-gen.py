@@ -30,18 +30,6 @@ from PyQt4 import QtGui
 import net_processing
 
 
-NETENV_HEADER = """
-resource_registry:
-  OS::TripleO::BlockStorage::Net::SoftwareConfig: nic-configs/cinder-storage.yaml
-  OS::TripleO::Compute::Net::SoftwareConfig: nic-configs/compute.yaml
-  OS::TripleO::Controller::Net::SoftwareConfig: nic-configs/controller.yaml
-  OS::TripleO::ObjectStorage::Net::SoftwareConfig: nic-configs/swift-storage.yaml
-  OS::TripleO::CephStorage::Net::SoftwareConfig: nic-configs/ceph-storage.yaml
-
-parameter_defaults:
-"""
-
-
 def get_current_item(model):
     current_index = model.currentIndex()
     return current_index.model().item(current_index.row())
@@ -378,7 +366,8 @@ class MainForm(QtGui.QMainWindow):
     def _ui_to_dict(self):
         """Convert the UI data to a more readable dict
 
-        :returns: dict representing the current UI state"""
+        :returns: dict representing the current UI state
+        """
         retval = {}
         for index, filename, _ in net_processing.TYPE_LIST:
             retval[filename] = []
@@ -396,6 +385,32 @@ class MainForm(QtGui.QMainWindow):
                 retval[filename].append(d)
         return retval
 
+    def _global_to_dict(self):
+        """Convert the global UI data to a dict
+
+        :return: dict representing the current global UI state
+        """
+        retval = {}
+        retval['control'] = {}
+        retval['control']['mask'] = self.control_mask.value()
+        retval['control']['route'] = self.control_route.text()
+        retval['control']['ec2'] = self.control_ec2.text()
+        retval['external'] = {}
+        retval['external']['cidr'] = self.external_cidr.text()
+        retval['external']['start'] = self.external_start.text()
+        retval['external']['end'] = self.external_end.text()
+        retval['external']['gateway'] = self.external_gateway.text()
+        retval['external']['vlan'] = self.external_vlan.value()
+        retval['external']['bridge'] = self.external_bridge.text()
+        for net in ['internal', 'storage', 'storage_mgmt', 'tenant',
+                    'management']:
+            retval[net] = {}
+            retval[net]['cidr'] = getattr(self, '%s_cidr' % net).text()
+            retval[net]['start'] = getattr(self, '%s_start' % net).text()
+            retval[net]['end'] = getattr(self, '%s_end' % net).text()
+            retval[net]['vlan'] = getattr(self, '%s_vlan' % net).value()
+        return retval
+
     def _generate_templates(self):
         # FIXME(bnemec): Make this path configurable
         base_path = '/tmp/templates'
@@ -405,64 +420,10 @@ class MainForm(QtGui.QMainWindow):
 
         # We need a fresh, unmolested copy of the dict for the following steps
         data = self._ui_to_dict()
-        # This is simple YAML, so instead of generating it with the yaml
-        # module, we'll just write it directly as text so we control the
-        # formatting.
-        # This should all be moved to net_processing, but unfortunately
-        # there's a lot of direct UI element usage right now.
-        with open(os.path.join(base_path,
-                               'network-environment.yaml'), 'w') as f:
-            def write(content):
-                f.write('  ' + content + '\n')
-            f.write(NETENV_HEADER)
-            if net_processing._net_used_all(data, 'ControlPlane'):
-                write("ControlPlaneSubnetCidr: '%d'" %
-                      self.control_mask.value())
-                write('ControlPlaneDefaultRoute: %s' %
-                      self.control_route.text())
-                write('EC2MetadataIp: %s' % self.control_ec2.text())
-            if net_processing._net_used_all(data, 'External'):
-                write('ExternalNetCidr: %s' % self.external_cidr.text())
-                write('ExternalAllocationPools: [{"start": "%s", '
-                      '"end": "%s"}]' % (self.external_start.text(),
-                                         self.external_end.text()))
-                write('ExternalInterfaceDefaultRoute: %s' %
-                      self.external_gateway.text())
-                write('ExternalNetworkVlanID: %d' % self.external_vlan.value())
-                write('NeutronExternalNetworkBridge: "%s"' %
-                      self.external_bridge.text())
-            if net_processing._net_used_all(data, 'InternalApi'):
-                write('InternalApiNetCidr: %s' % self.internal_cidr.text())
-                write('InternalApiAllocationPools: [{"start": "%s", '
-                      '"end": "%s"}]' % (self.internal_start.text(),
-                                         self.internal_end.text()))
-                write('InternalApiNetworkVlanID: %d' % self.internal_vlan.value())
-            if net_processing._net_used_all(data, 'Storage'):
-                write('StorageNetCidr: %s' % self.storage_cidr.text())
-                write('StorageAllocationPools: [{"start": "%s", '
-                      '"end": "%s"}]' % (self.storage_start.text(),
-                                         self.storage_end.text()))
-                write('StorageNetworkVlanID: %d' % self.storage_mgmt_vlan.value())
-            if net_processing._net_used_all(data, 'StorageMgmt'):
-                write('StorageMgmtNetCidr: %s' % self.storage_mgmt_cidr.text())
-                write('StorageMgmtAllocationPools: [{"start": "%s", '
-                      '"end": "%s"}]' % (self.storage_mgmt_start.text(),
-                                         self.storage_mgmt_end.text()))
-                write('StorageMgmtNetworkVlanID: %d' % self.storage_mgmt_vlan.value())
-            if net_processing._net_used_all(data, 'Tenant'):
-                write('TenantNetCidr: %s' % self.tenant_cidr.text())
-                write('TenantAllocationPools: [{"start": "%s", '
-                      '"end": "%s"}]' % (self.tenant_start.text(),
-                                         self.tenant_end.text()))
-                write('TenantNetworkVlanID: %d' % self.tenant_vlan.value())
-            if net_processing._net_used_all(data, 'Management'):
-                write('ManagementNetCidr: %s' % self.management_cidr.text())
-                write('ManagementAllocationPools: [{"start": "%s", '
-                      '"end": "%s"}]' % (self.management_start.text(),
-                                         self.management_end.text()))
-                write('ManagementNetworkVlanID: %d' % self.management_vlan.value())
+        global_data = self._global_to_dict()
+        net_processing._write_net_env(data, global_data, base_path)
 
-        net_process._write_net_iso(data, base_path)
+        net_processing._write_net_iso(data, base_path)
 
     def _node_type_changed(self, index):
         self.interfaces.setModel(
