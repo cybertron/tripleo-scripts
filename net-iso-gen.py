@@ -359,9 +359,18 @@ class MainForm(QtGui.QMainWindow):
         self.management_vlan.setValue(6)
         management_layout.addWidget(PairWidget('VLAN ID', self.management_vlan))
 
+        generate_layout = QtGui.QHBoxLayout()
+        self.base_path = QtGui.QLineEdit('/tmp/templates')
+        generate_layout.addWidget(self.base_path, 5)
+
+        set_path = QtGui.QPushButton('Set Output Path')
+        set_path.clicked.connect(self._set_output_path)
+        generate_layout.addWidget(set_path, 1)
+
         generate = QtGui.QPushButton('Generate')
         generate.clicked.connect(self._generate_templates)
-        main_layout.addWidget(generate)
+        generate_layout.addWidget(generate, 3)
+        main_layout.addLayout(generate_layout)
 
     def _ui_to_dict(self):
         """Convert the UI data to a more readable dict
@@ -412,8 +421,7 @@ class MainForm(QtGui.QMainWindow):
         return retval
 
     def _generate_templates(self):
-        # FIXME(bnemec): Make this path configurable
-        base_path = '/tmp/templates'
+        base_path = self.base_path.text()
 
         data = self._ui_to_dict()
         net_processing._write_nic_configs(data, base_path)
@@ -424,6 +432,12 @@ class MainForm(QtGui.QMainWindow):
         net_processing._write_net_env(data, global_data, base_path)
 
         net_processing._write_net_iso(data, base_path)
+
+    def _set_output_path(self):
+        new_path = QtGui.QFileDialog.getExistingDirectory(self,
+            'Select Output Directory', self.base_path.text())
+        if new_path:
+            self.base_path.setText(new_path)
 
     def _node_type_changed(self, index):
         self.interfaces.setModel(
