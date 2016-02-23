@@ -27,6 +27,8 @@ sip.setapi('QVariant', 2)
 from PyQt4 import QtCore
 from PyQt4 import QtGui
 
+import net_processing
+
 
 PARAMS = """heat_template_version: 2015-04-30
 
@@ -130,11 +132,6 @@ resource_registry:
 
 parameter_defaults:
 """
-TYPE_LIST = [(0, 'controller.yaml', 'Controller'),
-             (1, 'compute.yaml', 'Compute'),
-             (2, 'ceph-storage.yaml', 'CephStorage'),
-             (3, 'cinder-storage.yaml', 'BlockStorage'),
-             (4, 'swift-storage.yaml', 'SwiftStorage')]
 
 
 def get_current_item(model):
@@ -194,14 +191,6 @@ class MainForm(QtGui.QMainWindow):
 
         self._setup_ui()
         self.show()
-
-    def _empty_used_networks(self):
-        self._used_networks = {}
-        self._used_networks['controller.yaml'] = set()
-        self._used_networks['compute.yaml'] = set()
-        self._used_networks['ceph-storage.yaml'] = set()
-        self._used_networks['cinder-storage.yaml'] = set()
-        self._used_networks['swift-storage.yaml'] = set()
 
     def _setup_ui(self):
         self.resize(1280, 650)
@@ -266,6 +255,7 @@ class MainForm(QtGui.QMainWindow):
         input_layout.addWidget(PairWidget('Name', self.item_name))
 
         self.network_type = QtGui.QComboBox()
+        self.network_type.addItem('None')
         self.network_type.addItem('ControlPlane')
         self.network_type.addItem('External')
         self.network_type.addItem('InternalApi')
@@ -477,11 +467,33 @@ class MainForm(QtGui.QMainWindow):
         generate.clicked.connect(self._generate_templates)
         main_layout.addWidget(generate)
 
+    def _ui_to_dict(self):
+        """Convert the UI data to a more readable dict
+
+        :returns: dict representing the current UI state"""
+        retval = {}
+        for index, filename, _ in net_processing.TYPE_LIST:
+            retval[filename] = []
+            current_item = self.node_type.item(index)
+            current_model = self._node_models[current_item]
+            for i in range(current_model.rowCount()):
+                d = copy.deepcopy(current_model.item(i).data())
+                d['members'] = []
+                if d['type'] == 'ovs_bridge':
+                    item = current_model.item(i)
+                    nested_model = self._interface_models[item]
+                    for j in range(nested_model.rowCount()):
+                        nd = copy.deepcopy(nested_model.item(j).data())
+                        d['members'].append(nd)
+                retval[filename].append(d)
+        return retval
+
+    # This whole function should probably be moved to net_processing, but it
+    # has an unfortunate amount of direct usage of the UI elements right now.
     def _generate_templates(self):
         # FIXME(bnemec): Make this path configurable
         base_path = '/tmp/templates'
         nic_path = os.path.join(base_path, 'nic-configs')
-        self._empty_used_networks()
         try:
             os.mkdir(base_path)
         except OSError:
@@ -500,22 +512,16 @@ class MainForm(QtGui.QMainWindow):
             network_config = network_config['network_config']
             return (resources, network_config)
 
-        for index, filename, _ in TYPE_LIST:
+        data = self._ui_to_dict()
+        for filename, node_data in data.items():
             with open(os.path.join(nic_path, filename), 'w') as f:
                 f.write(PARAMS)
                 resources, network_config = new_resource()
-                # This is hard-coded, which is not ideal
-                current_item = self.node_type.item(index)
-                current_model = self._node_models[current_item]
-                for i in range(current_model.rowCount()):
-                    # Make a copy so we can massage the data
-                    d = copy.deepcopy(current_model.item(i).data())
-                    self._process_network_config(d, filename)
-                    if d['type'] == 'ovs_bridge':
-                        item = current_model.item(i)
-                        nested_model = self._interface_models[item]
-                        self._process_bridge_members(d, nested_model, filename)
-                    network_config.append(d)
+                for i in node_data:
+                    net_processing._process_network_config(i, filename)
+                    for j in i['members']:
+                        net_processing._process_bridge_members(j)
+                    network_config.append(i)
                 resource_string = yaml.safe_dump(resources,
                                                  default_flow_style=False)
                 # Ugly hack to remove unwanted quoting around get_params
@@ -527,6 +533,8 @@ class MainForm(QtGui.QMainWindow):
                 f.write(resource_string)
                 f.write(OUTPUTS)
 
+        # We need a fresh, unmolested copy of the dict for the following steps
+        data = self._ui_to_dict()
         # This is simple YAML, so instead of generating it with the yaml
         # module, we'll just write it directly as text so we control the
         # formatting.
@@ -535,13 +543,13 @@ class MainForm(QtGui.QMainWindow):
             def write(content):
                 f.write('  ' + content + '\n')
             f.write(NETENV_HEADER)
-            if self._net_used('ControlPlane'):
+            if net_processing._net_used_all(data, 'ControlPlane'):
                 write("ControlPlaneSubnetCidr: '%d'" %
                       self.control_mask.value())
                 write('ControlPlaneDefaultRoute: %s' %
                       self.control_route.text())
                 write('EC2MetadataIp: %s' % self.control_ec2.text())
-            if self._net_used('External'):
+            if net_processing._net_used_all(data, 'External'):
                 write('ExternalNetCidr: %s' % self.external_cidr.text())
                 write('ExternalAllocationPools: [{"start": "%s", '
                       '"end": "%s"}]' % (self.external_start.text(),
@@ -551,31 +559,31 @@ class MainForm(QtGui.QMainWindow):
                 write('ExternalNetworkVlanID: %d' % self.external_vlan.value())
                 write('NeutronExternalNetworkBridge: "%s"' %
                       self.external_bridge.text())
-            if self._net_used('InternalApi'):
+            if net_processing._net_used_all(data, 'InternalApi'):
                 write('InternalApiNetCidr: %s' % self.internal_cidr.text())
                 write('InternalApiAllocationPools: [{"start": "%s", '
                       '"end": "%s"}]' % (self.internal_start.text(),
                                          self.internal_end.text()))
                 write('InternalApiNetworkVlanID: %d' % self.internal_vlan.value())
-            if self._net_used('Storage'):
+            if net_processing._net_used_all(data, 'Storage'):
                 write('StorageNetCidr: %s' % self.storage_cidr.text())
                 write('StorageAllocationPools: [{"start": "%s", '
                       '"end": "%s"}]' % (self.storage_start.text(),
                                          self.storage_end.text()))
                 write('StorageNetworkVlanID: %d' % self.storage_mgmt_vlan.value())
-            if self._net_used('StorageMgmt'):
+            if net_processing._net_used_all(data, 'StorageMgmt'):
                 write('StorageMgmtNetCidr: %s' % self.storage_mgmt_cidr.text())
                 write('StorageMgmtAllocationPools: [{"start": "%s", '
                       '"end": "%s"}]' % (self.storage_mgmt_start.text(),
                                          self.storage_mgmt_end.text()))
                 write('StorageMgmtNetworkVlanID: %d' % self.storage_mgmt_vlan.value())
-            if self._net_used('Tenant'):
+            if net_processing._net_used_all(data, 'Tenant'):
                 write('TenantNetCidr: %s' % self.tenant_cidr.text())
                 write('TenantAllocationPools: [{"start": "%s", '
                       '"end": "%s"}]' % (self.tenant_start.text(),
                                          self.tenant_end.text()))
                 write('TenantNetworkVlanID: %d' % self.tenant_vlan.value())
-            if self._net_used('Management'):
+            if net_processing._net_used_all(data, 'Management'):
                 write('ManagementNetCidr: %s' % self.management_cidr.text())
                 write('ManagementAllocationPools: [{"start": "%s", '
                       '"end": "%s"}]' % (self.management_start.text(),
@@ -592,88 +600,12 @@ class MainForm(QtGui.QMainWindow):
                   #'../network/ports/vip.yaml')
             #write('OS::TripleO::Controller::Ports::RedisVipPort: '
                   #'../network/ports/vip.yaml')
-            self._write_net_iso(f, 'External')
-            self._write_net_iso(f, 'InternalApi', 'internal_api')
-            self._write_net_iso(f, 'Storage')
-            self._write_net_iso(f, 'StorageMgmt', 'storage_mgmt')
-            self._write_net_iso(f, 'Tenant')
-            self._write_net_iso(f, 'Management')
-
-    def _write_net_iso(self, f, net, basename=None):
-        if basename is None:
-            basename = net.lower()
-
-        def write(content):
-            format_str = '  ' + content + '\n'
-            f.write(format_str % (net, basename))
-
-        if self._net_used(net):
-            f.write('  # %s\n' % net)
-            write('OS::TripleO::Network::%s: '
-                  '../network/%s.yaml')
-            write('OS::TripleO::Network::Ports::%sVipPort: '
-                  '../network/ports/%s.yaml')
-        for _, filename, template_name in TYPE_LIST:
-            if net in self._used_networks[filename]:
-                write('OS::TripleO::' + template_name + '::Ports::%sPort: '
-                      '../network/ports/%s.yaml')
-
-    def _net_used(self, name):
-        return any([name in i
-                    for _, i in self._used_networks.items()])
-
-    def _process_network_config(self, d, filename):
-        if d['type'] == 'interface' or d['type'] == 'ovs_bridge':
-            network = d['network']
-            self._used_networks[filename].add(network)
-            del d['network']
-            # This is nonsense unless we're in a bridge
-            d.pop('primary', None)
-            # TODO: Format this less horribly
-            if network == 'ControlPlane':
-                d['addresses'] = [
-                    {'ip_netmask':
-                         {'list_join': ['/', ['{get_param: ControlPlaneIp}',
-                                              '{get_param: ControlPlaneSubnetCidr}'
-                                              ]]}}]
-                d['routes'] = [{'ip_netmask': '169.254.169.254/32',
-                                'next_hop': '{get_param: EC2MetadataIp}'}]
-                # HACK!  Typically non-controller nodes will need this, but
-                # it's not a safe assumption.  It's also not necessarily true
-                # that controller nodes don't need it.
-                if filename != 'controller.yaml':
-                    d['routes'].append({'default': True,
-                                        'next_hop': '{get_param: ControlPlaneDefaultRoute}'})
-            elif network == 'External':
-                d['addresses'] = [{'ip_netmask':
-                                       '{get_param: ExternalIpSubnet}'}]
-                d['routes'] = [
-                    {'ip_netmask': '0.0.0.0/0',
-                     'next_hop':
-                         '{get_param: ExternalInterfaceDefaultRoute}'}]
-            else:
-                d['addresses'] = [{'ip_netmask':
-                                       '{get_param: %sIpSubnet}' % network}]
-                del d['routes']
-
-    def _process_bridge_members(self, d, model, filename):
-        for i in range(model.rowCount()):
-            # Make a copy so we can massage the data
-            nd = copy.deepcopy(model.item(i).data())
-            if nd['type'] == 'interface':
-                d['members'].append({'type': 'interface',
-                                     'name': nd['name'],
-                                     'primary': nd['primary'],
-                                     })
-            elif nd['type'] == 'vlan':
-                self._used_networks[filename].add(nd['network'])
-                vlan_id = '{get_param: %sNetworkVlanID}' % nd['network']
-                netmask = '{get_param: %sIpSubnet}' % nd['network']
-                d['members'].append({'type': 'vlan',
-                                     'vlan_id': vlan_id,
-                                     'addresses': [
-                                         {'ip_netmask': netmask}]
-                                     })
+            net_processing._write_net_iso(f, 'External', data)
+            net_processing._write_net_iso(f, 'InternalApi', data, 'internal_api')
+            net_processing._write_net_iso(f, 'Storage', data)
+            net_processing._write_net_iso(f, 'StorageMgmt', data, 'storage_mgmt')
+            net_processing._write_net_iso(f, 'Tenant', data)
+            net_processing._write_net_iso(f, 'Management', data)
 
     def _node_type_changed(self, index):
         self.interfaces.setModel(
@@ -694,6 +626,7 @@ class MainForm(QtGui.QMainWindow):
 
     def _interface_focused(self):
         self._last_selected = self.interfaces
+        self._interface_changed(self.interfaces.currentIndex())
 
     def _nested_changed(self, index):
         row = index.row()
@@ -703,6 +636,7 @@ class MainForm(QtGui.QMainWindow):
 
     def _nested_focused(self):
         self._last_selected = self.nested_interfaces
+        self._nested_changed(self.nested_interfaces.currentIndex())
 
     def _next_nic_name(self):
         current_item = self.node_type.currentItem()
@@ -773,7 +707,7 @@ class MainForm(QtGui.QMainWindow):
                           'addresses': [],
                           'routes': [],
                           'members': [],
-                          'network': 'ControlPlane',
+                          'network': 'None',
                           })
             self._interface_models[item] = QtGui.QStandardItemModel(0, 1)
             current_model.appendRow(item)
