@@ -239,25 +239,26 @@ class MainForm(QtGui.QMainWindow):
         self.internal_group.setLayout(internal_layout)
         params_layout.addWidget(self.internal_group)
 
-        self.internal_cidr = QtGui.QLineEdit()
-        self.internal_cidr.setText('172.17.0.0/24')
-        internal_layout.addWidget(PairWidget('CIDR', self.internal_cidr))
+        self.internal_api_cidr = QtGui.QLineEdit()
+        self.internal_api_cidr.setText('172.17.0.0/24')
+        internal_layout.addWidget(PairWidget('CIDR', self.internal_api_cidr))
 
-        self.internal_start = QtGui.QLineEdit()
-        self.internal_start.setText('172.17.0.10')
+        self.internal_api_start = QtGui.QLineEdit()
+        self.internal_api_start.setText('172.17.0.10')
         internal_layout.addWidget(PairWidget('IP Start',
-                                             self.internal_start))
+                                             self.internal_api_start))
 
-        self.internal_end = QtGui.QLineEdit()
-        self.internal_end.setText('172.17.0.250')
+        self.internal_api_end = QtGui.QLineEdit()
+        self.internal_api_end.setText('172.17.0.250')
         internal_layout.addWidget(PairWidget('IP End',
-                                             self.internal_end))
+                                             self.internal_api_end))
 
-        self.internal_vlan = QtGui.QSpinBox()
-        self.internal_vlan.setMinimum(1)
-        self.internal_vlan.setMaximum(4096)
-        self.internal_vlan.setValue(2)
-        internal_layout.addWidget(PairWidget('VLAN ID', self.internal_vlan))
+        self.internal_api_vlan = QtGui.QSpinBox()
+        self.internal_api_vlan.setMinimum(1)
+        self.internal_api_vlan.setMaximum(4096)
+        self.internal_api_vlan.setValue(2)
+        internal_layout.addWidget(PairWidget('VLAN ID',
+                                             self.internal_api_vlan))
 
         # Storage
         self.storage_group = QtGui.QGroupBox('Storage')
@@ -417,8 +418,7 @@ class MainForm(QtGui.QMainWindow):
         retval['external']['gateway'] = self.external_gateway.text()
         retval['external']['vlan'] = self.external_vlan.value()
         retval['external']['bridge'] = self.external_bridge.text()
-        for net in ['internal', 'storage', 'storage_mgmt', 'tenant',
-                    'management']:
+        for _, net in net_processing.SIMILAR_NETS:
             retval[net] = {}
             retval[net]['cidr'] = getattr(self, '%s_cidr' % net).text()
             retval[net]['start'] = getattr(self, '%s_start' % net).text()
@@ -430,14 +430,14 @@ class MainForm(QtGui.QMainWindow):
         base_path = self.base_path.text()
 
         data = self._ui_to_dict()
+        global_data = self._global_to_dict()
+        net_processing._validate_config(data, global_data)
         net_processing._write_nic_configs(data, base_path)
-
         # We need a fresh, unmolested copy of the dict for the following steps
         data = self._ui_to_dict()
-        global_data = self._global_to_dict()
         net_processing._write_net_env(data, global_data, base_path)
-
         net_processing._write_net_iso(data, base_path)
+        print 'Templates generated successfully'
 
     def _set_output_path(self):
         new_path = QtGui.QFileDialog.getExistingDirectory(self,

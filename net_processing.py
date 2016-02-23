@@ -124,6 +124,17 @@ TYPE_LIST = [(0, 'controller.yaml', 'Controller'),
              (2, 'ceph-storage.yaml', 'CephStorage'),
              (3, 'cinder-storage.yaml', 'BlockStorage'),
              (4, 'swift-storage.yaml', 'SwiftStorage')]
+ALL_NETS = [('ControlPlane', 'control'),
+            ('External', 'external'),
+            ('InternalApi', 'internal_api'),
+            ('Storage', 'storage'),
+            ('StorageMgmt', 'storage_mgmt'),
+            ('Tenant', 'tenant'),
+            ('Management', 'management')
+            ]
+# SIMILAR_NETS are the networks with uniform parameters.  ControlPlane and
+# External both have some unique ones that require special handling.
+SIMILAR_NETS = ALL_NETS[2:]
 
 
 def _write_nic_configs(data, base_path):
@@ -196,12 +207,7 @@ def _write_net_env(data, global_data, base_path):
             write('ExternalNetworkVlanID: %d' % global_data['external']['vlan'])
             write('NeutronExternalNetworkBridge: "%s"' %
                   global_data['external']['bridge'])
-        for lower, camel in [('internal', 'InternalApi'),
-                             ('storage', 'Storage'),
-                             ('storage_mgmt', 'StorageMgmt'),
-                             ('tenant', 'Tenant'),
-                             ('management', 'Management'),
-                             ]:
+        for camel, lower in SIMILAR_NETS:
             if _net_used_all(data, camel):
                 write('%sNetCidr: %s' % (camel, global_data[lower]['cidr']))
                 write('%sAllocationPools: [{"start": "%s", '
@@ -222,12 +228,8 @@ def _write_net_iso(data, base_path):
                 #'../network/ports/vip.yaml')
         #write('OS::TripleO::Controller::Ports::RedisVipPort: '
                 #'../network/ports/vip.yaml')
-        _write_net_iso_entry(f, 'External', data)
-        _write_net_iso_entry(f, 'InternalApi', data, 'internal_api')
-        _write_net_iso_entry(f, 'Storage', data)
-        _write_net_iso_entry(f, 'StorageMgmt', data, 'storage_mgmt')
-        _write_net_iso_entry(f, 'Tenant', data)
-        _write_net_iso_entry(f, 'Management', data)
+        for i in ALL_NETS[1:]:
+            _write_net_iso_entry(f, i[0], data, i[1])
 
 def _write_net_iso_entry(f, net, data, basename=None):
     if basename is None:
@@ -249,9 +251,15 @@ def _write_net_iso_entry(f, net, data, basename=None):
                   '../network/ports/%s.yaml')
 
 def _net_used_all(data, name):
+    """Check whether a network is used in any nic-config file"""
     return any([_net_used(data, name, fname) for fname, _ in data.items()])
 
 def _net_used(data, name, filename):
+    """Determine whether nics are configured to use a network
+
+    Returns whether a nic in filename is configured to use the network
+    defined by name.  name is the camelcase form of the network.
+    """
     node_data = data[filename]
     for i in node_data:
         if i['network'] == name:
@@ -304,3 +312,24 @@ def _process_bridge_members(nd):
         netmask = '{get_param: %sIpSubnet}' % nd['network']
         nd['addresses'] = [{'ip_netmask': netmask}]
     return
+
+def _validate_config(data, global_data):
+    _check_duplicate_vlans(data, global_data)
+
+def _lower_to_camel(lower):
+    result = [i[0] for i in ALL_NETS if i[1] == lower]
+    if len(result) == 1:
+        return result[0]
+    raise IndexError('Expected one result, found: %d' % len(result))
+
+def _check_duplicate_vlans(data, global_data):
+    seen = set()
+    for name, d in global_data.items():
+        try:
+            used = _net_used_all(data, _lower_to_camel(name))
+            if d['vlan'] in seen and used:
+                raise RuntimeError('Duplicate VLAN found')
+            if used:
+                seen.add(d['vlan'])
+        except (TypeError, KeyError, IndexError):
+            pass
