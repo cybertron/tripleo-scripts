@@ -315,6 +315,7 @@ def _process_bridge_members(nd):
 
 def _validate_config(data, global_data):
     _check_duplicate_vlans(data, global_data)
+    _check_duplicate_networks(data)
 
 def _lower_to_camel(lower):
     result = [i[0] for i in ALL_NETS if i[1] == lower]
@@ -333,3 +334,16 @@ def _check_duplicate_vlans(data, global_data):
                 seen.add(d['vlan'])
         except (TypeError, KeyError, IndexError):
             pass
+
+def _check_duplicate_networks(data):
+    err_msg = 'Duplicate network assignment found: %s in %s'
+    for filename, d in data.items():
+        seen = set()
+        for i in d:
+            if i['network'] in seen and i['network'] != 'None':
+                raise RuntimeError(err_msg % (i['network'], filename))
+            for j in i['members']:
+                if j['network'] in seen and j['network'] != 'None':
+                    raise RuntimeError(err_msg % (j['network'], filename))
+                seen.add(j['network'])
+            seen.add(i['network'])

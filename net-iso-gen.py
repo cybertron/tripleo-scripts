@@ -431,7 +431,11 @@ class MainForm(QtGui.QMainWindow):
 
         data = self._ui_to_dict()
         global_data = self._global_to_dict()
-        net_processing._validate_config(data, global_data)
+        try:
+            net_processing._validate_config(data, global_data)
+        except RuntimeError as e:
+            QtGui.QMessageBox.critical(self, 'Validation Error', str(e))
+            return
         net_processing._write_nic_configs(data, base_path)
         # We need a fresh, unmolested copy of the dict for the following steps
         data = self._ui_to_dict()
@@ -501,7 +505,7 @@ class MainForm(QtGui.QMainWindow):
         nic_name = 'nic%d' % next_nic_num
         return nic_name
 
-    def _new_nic_item(self, nic_name):
+    def _new_nic_item(self, nic_name, network='ControlPlane'):
         item = QtGui.QStandardItem(QtGui.QIcon('network-wired.png'),
                                    nic_name)
         item.setData({'type': 'interface',
@@ -509,7 +513,7 @@ class MainForm(QtGui.QMainWindow):
                       'use_dhcp': False,
                       'addresses': [],
                       'routes': [],
-                      'network': 'ControlPlane',
+                      'network': network,
                       'primary': True,
                       })
         return item
@@ -526,7 +530,7 @@ class MainForm(QtGui.QMainWindow):
             current_item = get_current_item(self.interfaces)
             current_model = self._interface_models[current_item]
             nic_name = self._next_nic_name()
-            item = self._new_nic_item(nic_name)
+            item = self._new_nic_item(nic_name, 'None')
             current_model.appendRow(item)
         else:
             raise RuntimeError('Can only add interfaces to top-level nodes '
