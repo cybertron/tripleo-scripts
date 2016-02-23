@@ -42,7 +42,6 @@ def _net_used_all(data, name):
 
 def _net_used(data, name, filename):
     node_data = data[filename]
-    print node_data
     for i in node_data:
         if i['network'] == name:
             return True

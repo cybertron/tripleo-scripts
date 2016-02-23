@@ -528,8 +528,6 @@ class MainForm(QtGui.QMainWindow):
                 resource_string = resource_string.replace(
                     "'{get_param:", "{get_param:")
                 resource_string = resource_string.replace("}'", "}")
-                # And fix the lack of them around the /
-                #resource_string = resource_string.replace("- /", "- '/'")
                 f.write(resource_string)
                 f.write(OUTPUTS)
 
