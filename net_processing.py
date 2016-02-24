@@ -301,20 +301,49 @@ def _process_network_config(d, filename):
             d.pop('routes', None)
         else:
             d['addresses'] = [{'ip_netmask':
-                                    '{get_param: %sIpSubnet}' % network}]
+                                   '{get_param: %sIpSubnet}' % network}]
             del d['routes']
 
 def _process_bridge_members(nd):
     if nd['type'] == 'vlan':
-        vlan_id = '{get_param: %sNetworkVlanID}' % nd['network']
-        nd['vlan_id'] = vlan_id
-        netmask = '{get_param: %sIpSubnet}' % nd['network']
-        nd['addresses'] = [{'ip_netmask': netmask}]
+        network = nd['network']
+        del nd['network']
+        nd.pop('name', None)
+        if network == 'External':
+            # This shares some logic with _process_network_config. Refactor?
+            nd['addresses'] = [{'ip_netmask':
+                                    '{get_param: ExternalIpSubnet}'}]
+            nd['routes'] = [
+                {'ip_netmask': '0.0.0.0/0',
+                    'next_hop':
+                        '{get_param: ExternalInterfaceDefaultRoute}'}]
+            nd['vlan_id'] = '{get_param: ExternalNetworkVlanID}'
+            if not nd['device']:
+                nd.pop('device', None)
+        elif network == 'None':
+            raise RuntimeError('VLANs must have a network set')
+        else:
+            vlan_id = '{get_param: %sNetworkVlanID}' % network
+            nd['vlan_id'] = vlan_id
+            netmask = '{get_param: %sIpSubnet}' % network
+            nd['addresses'] = [{'ip_netmask': netmask}]
+            nd.pop('routes', None)
+            if not nd['device']:
+                nd.pop('device', None)
+    elif nd['type'] == 'ovs_bond':
+        nd.pop('network', None)
+        m1 = nd['nics'][0]
+        m2 = nd['nics'][1]
+        del nd['nics']
+        nd['members'] = [{'type': 'interface', 'name': m1, 'primary': True},
+                         {'type': 'interface', 'name': m2},
+                         ]
     return
 
 def _validate_config(data, global_data):
     _check_duplicate_vlans(data, global_data)
     _check_duplicate_networks(data)
+    _check_invalid_vlan_devices(data)
     # TODO(bnemec): Check for conflicting cidrs
 
 def _lower_to_camel(lower):
@@ -347,6 +376,22 @@ def _check_duplicate_networks(data):
                     raise RuntimeError(err_msg % (j['network'], filename))
                 seen.add(j['network'])
             seen.add(i['network'])
+
+def _check_invalid_vlan_devices(data):
+    err_msg = 'VLAN device not found: %s'
+    for filename, d in data.items():
+        bonds = set()
+        for i in d:
+            if i['type'] == 'ovs_bridge':
+                for j in i['members']:
+                    if j['type'] == 'ovs_bond':
+                        bonds.add(j['name'])
+        for i in d:
+            if i['type'] == 'ovs_bridge':
+                for j in i['members']:
+                    if (j['type'] == 'vlan' and j['device'] and
+                            j['device'] not in bonds):
+                        raise RuntimeError(err_msg % j['device'])
 
 def _load(base_path):
     file_data = pickle.load(open(os.path.join(base_path,

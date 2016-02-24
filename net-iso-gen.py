@@ -31,7 +31,7 @@ import net_processing
 
 
 DATA_MAJOR = 0
-DATA_MINOR = 1
+DATA_MINOR = 2
 
 
 def get_current_item(model):
@@ -110,6 +110,9 @@ class MainForm(QtGui.QMainWindow):
         add_vlan = QtGui.QPushButton('Add VLAN')
         add_vlan.clicked.connect(self._add_vlan)
         button_layout.addWidget(add_vlan)
+        add_bond = QtGui.QPushButton('Add Bond')
+        add_bond.clicked.connect(self._add_bond)
+        button_layout.addWidget(add_bond)
         delete = QtGui.QPushButton('Delete')
         delete.clicked.connect(self._delete_current)
         button_layout.addWidget(delete)
@@ -169,6 +172,21 @@ class MainForm(QtGui.QMainWindow):
         self.primary = QtGui.QCheckBox()
         self.primary.stateChanged.connect(self._primary_changed)
         input_layout.addWidget(PairWidget('Primary', self.primary))
+
+        self.device = QtGui.QLineEdit()
+        self.device.textEdited.connect(self._device_changed)
+        input_layout.addWidget(PairWidget('VLAN Bond', self.device))
+
+        self.bond_group = QtGui.QGroupBox('Bond Options')
+        bond_layout = QtGui.QVBoxLayout()
+        self.bond_group.setLayout(bond_layout)
+        self.bond_m1 = QtGui.QLineEdit()
+        self.bond_m1.textEdited.connect(self._bond_members_changed)
+        bond_layout.addWidget(PairWidget('First NIC', self.bond_m1))
+        self.bond_m2 = QtGui.QLineEdit()
+        self.bond_m2.textEdited.connect(self._bond_members_changed)
+        bond_layout.addWidget(PairWidget('Second NIC', self.bond_m2))
+        input_layout.addWidget(self.bond_group)
 
         input_layout.addStretch()
 
@@ -422,7 +440,7 @@ class MainForm(QtGui.QMainWindow):
                 elif d['type'] == 'ovs_bridge':
                     item.setIcon(QtGui.QIcon('bridge.svgz'))
                 elif i['type'] == 'vlan':
-                    nested_item.setIcon(QtGui.QIcon('network-workgroup.svgz'))
+                    item.setIcon(QtGui.QIcon('network-workgroup.svgz'))
                 item.setText(d['name'])
                 item.setData(new_data)
                 self._add_item(item, current_model, self._interface_models)
@@ -434,6 +452,8 @@ class MainForm(QtGui.QMainWindow):
                         nested_item.setIcon(QtGui.QIcon('network-wired.png'))
                     elif i['type'] == 'vlan':
                         nested_item.setIcon(QtGui.QIcon('network-workgroup.svgz'))
+                    elif i['type'] == 'ovs_bond':
+                        nested_item.setIcon(QtGui.QIcon('repository.svgz'))
                     nested_item.setText(i['name'])
                     nested_item.setData(i)
                     self._add_item(nested_item, nested_model)
@@ -467,7 +487,11 @@ class MainForm(QtGui.QMainWindow):
         return retval
 
     def _dict_to_global(self, data):
-        # If/when there are data changes, we'll need to check the version here
+        if data['major'] != DATA_MAJOR or data['minor'] > DATA_MINOR:
+            raise RuntimeError('Loaded data version %d.%d is not compatible '
+                               'with current version %d.%d' %
+                               (data['major'], data['minor'],
+                                DATA_MAJOR, DATA_MINOR))
         self.control_mask.setValue(data['control']['mask'])
         self.control_route.setText(data['control']['route'])
         self.control_ec2.setText(data['control']['ec2'])
@@ -635,6 +659,7 @@ class MainForm(QtGui.QMainWindow):
                           'routes': [],
                           'network': 'External',
                           'name': 'VLAN',
+                          'device': '',
                           })
             return item
 
@@ -651,6 +676,26 @@ class MainForm(QtGui.QMainWindow):
         else:
             raise RuntimeError('Can only add VLANs to top-level nodes and '
                                'bridges')
+
+    def _add_bond(self):
+        if self._last_selected is self.interfaces:
+            current_item = get_current_item(self.interfaces)
+            if current_item.data()['type'] != 'ovs_bridge':
+                raise RuntimeError('Can only add bonds to OVS bridges')
+            current_model = self._interface_models[current_item]
+            bond_name = 'bond1'
+            item = QtGui.QStandardItem(QtGui.QIcon('repository.svgz'),
+                                       bond_name)
+            item.setData({'type': 'ovs_bond',
+                          'name': bond_name,
+                          'nics': ['nic1', 'nic2'],
+                          'ovs_options':
+                              '{get_param: BondInterfaceOvsOptions}',
+                          'network': 'None',
+                          })
+            self._add_item(item, current_model)
+        else:
+            raise RuntimeError('Can only add bonds to OVS bridges')
 
     def _delete_current(self):
         if self._last_selected is self.node_type:
@@ -672,6 +717,16 @@ class MainForm(QtGui.QMainWindow):
         else:
             self.primary.setDisabled(True)
         self.item_name.setText(d['name'])
+        if d['type'] == 'ovs_bond':
+            self.bond_m1.setText(d['nics'][0])
+            self.bond_m2.setText(d['nics'][1])
+        else:
+            self.bond_m1.setText('')
+            self.bond_m2.setText('')
+        if 'device' in d:
+            self.device.setText(d['device'])
+        else:
+            self.device.setText('')
 
     def _network_type_changed(self, index):
         new_name = self.network_type.currentText()
@@ -709,6 +764,24 @@ class MainForm(QtGui.QMainWindow):
         current_item.setText(text)
         d = current_item.data()
         d['name'] = self.item_name.text()
+        current_item.setData(d)
+
+    def _bond_members_changed(self, _):
+        if self._last_selected is self.nested_interfaces:
+            current_item = get_current_item(self.nested_interfaces)
+        else:
+            raise RuntimeError('Cannot change bond members on non-bond')
+        d = current_item.data()
+        d['nics'] = [self.bond_m1.text(), self.bond_m2.text()]
+        current_item.setData(d)
+
+    def _device_changed(self, text):
+        if self._last_selected is self.nested_interfaces:
+            current_item = get_current_item(self.nested_interfaces)
+        else:
+            raise RuntimeError('Cannot set VLAN device on non-VLAN')
+        d = current_item.data()
+        d['device'] = text
         current_item.setData(d)
 
 
