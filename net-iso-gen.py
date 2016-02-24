@@ -152,6 +152,10 @@ class MainForm(QtGui.QMainWindow):
         self.nested_interfaces.focused.connect(self._nested_focused)
         pane_layout.addWidget(self.nested_interfaces, 100)
 
+        # Can't do this before self.nested_interfaces exists
+        self.node_type.setCurrentRow(0)
+        self._last_selected = self.node_type
+
         input_layout = QtGui.QVBoxLayout()
         pane_layout.addLayout(input_layout, 100)
 
