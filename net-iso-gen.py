@@ -442,6 +442,10 @@ class MainForm(QtGui.QMainWindow):
         return retval
 
     def _dict_to_ui(self, data):
+        """Populate the UI with values from a dict
+
+        The dict must be structured the same as the output from _ui_to_dict.
+        """
         self._interface_models = {}
         self._last_selected = None
         # Initialize all node models
@@ -510,6 +514,10 @@ class MainForm(QtGui.QMainWindow):
         return retval
 
     def _dict_to_global(self, data):
+        """Populate the UI with values from a dict
+
+        The dict must be structured the same as the output from _global_to_dict
+        """
         if data['major'] != DATA_MAJOR or data['minor'] > DATA_MINOR:
             raise RuntimeError('Loaded data version %d.%d is not compatible '
                                'with current version %d.%d' %
@@ -597,6 +605,11 @@ class MainForm(QtGui.QMainWindow):
         self._nested_changed(self.nested_interfaces.currentIndex())
 
     def _next_nic_name(self):
+        """Guess a reasonable next nic number
+
+        Looks through the existing configuration to find the highest numbered
+        nic, then returns the name of the next in line.
+        """
         current_item = self.node_type.currentItem()
         current_model = self._node_models[current_item]
         next_nic_num = 1
@@ -734,6 +747,11 @@ class MainForm(QtGui.QMainWindow):
             current_index.model().takeRow(current_index.row())
 
     def _update_input(self, item):
+        """Update UI input elements to match selected item
+
+        Should be called any time the selected item changes so the UI stays
+        in sync.
+        """
         d = item.data()
         self.network_type.setCurrentIndex(
             self.network_type.findText(d['network']))

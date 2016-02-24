@@ -138,6 +138,7 @@ SIMILAR_NETS = ALL_NETS[2:]
 
 
 def _write_nic_configs(data, base_path):
+    """Write nic configs based on the data passed in"""
     nic_path = os.path.join(base_path, 'nic-configs')
     try:
         os.mkdir(base_path)
@@ -181,6 +182,7 @@ def _write_pickle(data, global_data, base_path):
                                              'ui-settings.pickle'), 'wb'))
 
 def _write_net_env(data, global_data, base_path):
+    """Write network-environment.yaml based on the data passed in"""
     _write_pickle(data, global_data, base_path)
     # This is simple YAML, so instead of generating it with the yaml
     # module, we'll just write it directly as text so we control the
@@ -221,6 +223,7 @@ def _write_net_env(data, global_data, base_path):
         write('BondInterfaceOvsOptions: %s' % global_data['bond_options'])
 
 def _write_net_iso(data, base_path):
+    """Write network-isolation.yaml based on the data passed in"""
     with open(os.path.join(base_path,
                            'network-isolation.yaml'), 'w') as f:
         def write(content):
@@ -235,6 +238,7 @@ def _write_net_iso(data, base_path):
             _write_net_iso_entry(f, i[0], data, i[1])
 
 def _write_net_iso_entry(f, net, data, basename=None):
+    """Write the entries for a single network to network-isolation.yaml"""
     if basename is None:
         basename = net.lower()
 
@@ -273,6 +277,12 @@ def _net_used(data, name, filename):
     return False
 
 def _process_network_config(d, filename):
+    """Tweak config data for top-level interfaces and bridges
+
+    There is some data in the internal data structures of the UI that doesn't
+    belong in the output files, or that needs to be adjusted/added.  This
+    function is responsible for doing that.
+    """
     if d['type'] == 'interface' or d['type'] == 'ovs_bridge':
         network = d['network']
         del d['network']
@@ -311,6 +321,7 @@ def _process_network_config(d, filename):
             del d['routes']
 
 def _process_bridge_members(nd):
+    """The same as _process_network_config, except for bridge members"""
     if nd['type'] == 'vlan':
         network = nd['network']
         del nd['network']
@@ -361,6 +372,13 @@ def _validate_config(data, global_data):
     #               Warn if vlan device is not set when using bonds?
 
 def _lower_to_camel(lower):
+    """Given a lower-case network name, return the camel-cased form
+
+    Uses the ALL_NETS structure for the mapping.
+
+    Example: control -> ControlPlane
+             storage_mgmt -> StorageMgmt
+    """
     result = [i[0] for i in ALL_NETS if i[1] == lower]
     if len(result) == 1:
         return result[0]
