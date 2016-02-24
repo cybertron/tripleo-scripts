@@ -31,7 +31,7 @@ import net_processing
 
 
 DATA_MAJOR = 0
-DATA_MINOR = 2
+DATA_MINOR = 3
 
 
 def get_current_item(model):
@@ -54,7 +54,11 @@ class PairWidget(QtGui.QWidget):
             self.layout.addWidget(self.label)
 
         self.widget = widget
-        self.layout.addWidget(self.widget)
+        try:
+            for w in widget:
+                self.layout.addWidget(w)
+        except TypeError:
+            self.layout.addWidget(widget)
 
 
 class NetworkListView(QtGui.QListView):
@@ -93,7 +97,7 @@ class MainForm(QtGui.QMainWindow):
         self.show()
 
     def _setup_ui(self):
-        self.resize(1280, 650)
+        self.resize(1280, 700)
         self.setWindowTitle('Network Isolation Template Generator')
 
         self.setCentralWidget(QtGui.QWidget())
@@ -382,6 +386,20 @@ class MainForm(QtGui.QMainWindow):
         self.management_vlan.setValue(6)
         management_layout.addWidget(PairWidget('VLAN ID', self.management_vlan))
 
+        # General options
+        general_group = QtGui.QGroupBox('General Options')
+        general_layout = QtGui.QHBoxLayout()
+        general_group.setLayout(general_layout)
+        main_layout.addWidget(general_group)
+
+        self.dns1 = QtGui.QLineEdit('8.8.8.8')
+        self.dns2 = QtGui.QLineEdit('8.8.4.4')
+        general_layout.addWidget(PairWidget('DNS Servers', [self.dns1,
+                                                            self.dns2]))
+
+        self.bond_options = QtGui.QLineEdit('bond_mode=balance-slb')
+        general_layout.addWidget(PairWidget('OVS Bond Options', self.bond_options))
+
         generate_layout = QtGui.QHBoxLayout()
         self.base_path = QtGui.QLineEdit('/tmp/templates')
         generate_layout.addWidget(self.base_path, 5)
@@ -484,6 +502,9 @@ class MainForm(QtGui.QMainWindow):
             retval[net]['start'] = getattr(self, '%s_start' % net).text()
             retval[net]['end'] = getattr(self, '%s_end' % net).text()
             retval[net]['vlan'] = getattr(self, '%s_vlan' % net).value()
+        retval['dns1'] = self.dns1.text()
+        retval['dns2'] = self.dns2.text()
+        retval['bond_options'] = self.bond_options.text()
         return retval
 
     def _dict_to_global(self, data):
@@ -506,6 +527,9 @@ class MainForm(QtGui.QMainWindow):
             getattr(self, '%s_start' % net).setText(data[net]['start'])
             getattr(self, '%s_end' % net).setText(data[net]['end'])
             getattr(self, '%s_vlan' % net).setValue(data[net]['vlan'])
+        self.dns1.setText(data.get('dns1', ''))
+        self.dns2.setText(data.get('dns2', ''))
+        self.bond_options.setText(data.get('bond_options', ''))
 
     def _generate_templates(self):
         base_path = self.base_path.text()

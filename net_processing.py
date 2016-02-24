@@ -203,7 +203,8 @@ def _write_net_env(data, global_data, base_path):
                                      global_data['external']['end']))
             write('ExternalInterfaceDefaultRoute: %s' %
                   global_data['external']['gateway'])
-            write('ExternalNetworkVlanID: %d' % global_data['external']['vlan'])
+            write('ExternalNetworkVlanID: %d' %
+                  global_data['external']['vlan'])
             write('NeutronExternalNetworkBridge: "%s"' %
                   global_data['external']['bridge'])
         for camel, lower in SIMILAR_NETS:
@@ -215,6 +216,9 @@ def _write_net_env(data, global_data, base_path):
                                        global_data[lower]['end']))
                 write('%sNetworkVlanID: %d' % (camel,
                                                global_data[lower]['vlan']))
+        write('DnsServers: ["%s", "%s"]' % (global_data['dns1'],
+                                            global_data['dns2']))
+        write('BondInterfaceOvsOptions: %s' % global_data['bond_options'])
 
 def _write_net_iso(data, base_path):
     with open(os.path.join(base_path,
@@ -349,6 +353,7 @@ def _validate_config(data, global_data):
     # TODO(bnemec): Check for conflicting cidrs
     #               Duplicate nics
     #               Duplicate bonds
+    #               Warn if vlan device is not set when using bonds?
 
 def _lower_to_camel(lower):
     result = [i[0] for i in ALL_NETS if i[1] == lower]
