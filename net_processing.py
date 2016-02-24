@@ -336,6 +336,11 @@ def _process_bridge_members(nd):
             nd.pop('routes', None)
             if not nd['device']:
                 nd.pop('device', None)
+    elif nd['type'] == 'interface':
+        nd.pop('network', None)
+        nd.pop('addresses', None)
+        nd.pop('routes', None)
+        nd.pop('use_dhcp', None)
     elif nd['type'] == 'ovs_bond':
         nd.pop('network', None)
         m1 = nd['nics'][0]
