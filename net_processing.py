@@ -163,7 +163,7 @@ def _write_nic_configs(data, base_path):
             resources, network_config = new_resource()
             for i in node_data:
                 _process_network_config(i, filename)
-                for j in i['members']:
+                for j in i.get('members', []):
                     _process_bridge_members(j)
                 network_config.append(i)
             resource_string = yaml.safe_dump(resources,
@@ -274,6 +274,8 @@ def _process_network_config(d, filename):
         del d['network']
         # This is nonsense unless we're in a bridge
         d.pop('primary', None)
+        if d['type'] == 'interface':
+            d.pop('members', None)
         # TODO: Format this less horribly
         if network == 'ControlPlane':
             d['addresses'] = [
@@ -345,6 +347,8 @@ def _validate_config(data, global_data):
     _check_duplicate_networks(data)
     _check_invalid_vlan_devices(data)
     # TODO(bnemec): Check for conflicting cidrs
+    #               Duplicate nics
+    #               Duplicate bonds
 
 def _lower_to_camel(lower):
     result = [i[0] for i in ALL_NETS if i[1] == lower]
