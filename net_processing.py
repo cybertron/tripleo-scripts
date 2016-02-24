@@ -176,10 +176,9 @@ def _write_nic_configs(data, base_path):
             f.write(OUTPUTS)
 
 def _write_pickle(data, global_data, base_path):
-    pickle.dump(data, open(os.path.join(base_path,
-                                        'nic-configs.pickle'), 'wb'))
-    pickle.dump(global_data, open(os.path.join(base_path,
-                                               'global.pickle'), 'wb'))
+    file_data = {'data': data, 'global_data': global_data}
+    pickle.dump(file_data, open(os.path.join(base_path,
+                                             'ui-settings.pickle'), 'wb'))
 
 def _write_net_env(data, global_data, base_path):
     _write_pickle(data, global_data, base_path)
@@ -350,10 +349,10 @@ def _check_duplicate_networks(data):
             seen.add(i['network'])
 
 def _load(base_path):
-    nic_data = pickle.load(open(os.path.join(base_path,
-                                             'nic-configs.pickle'), 'rb'))
-    global_data = pickle.load(open(os.path.join(base_path,
-                                                'global.pickle'), 'rb'))
+    file_data = pickle.load(open(os.path.join(base_path,
+                                              'ui-settings.pickle'), 'rb'))
+    nic_data = file_data['data']
+    global_data = file_data['global_data']
     return nic_data, global_data
 
 def _index_from_filename(filename):

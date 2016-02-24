@@ -410,7 +410,6 @@ class MainForm(QtGui.QMainWindow):
         for i in range(self.node_type.count()):
             current_item = self.node_type.item(i)
             self._node_models[current_item] = QtGui.QStandardItemModel(0, 1)
-        print data
         for filename, all_data in data.items():
             index = net_processing._index_from_filename(filename)
             current_model = self._node_models[self.node_type.item(index)]
