@@ -127,7 +127,7 @@ class MainForm(QtGui.QMainWindow):
 
         self.node_type = NetworkListWidget()
         def new_item(name):
-            item = QtGui.QListWidgetItem(QtGui.QIcon('network-server.svgz'), name)
+            item = QtGui.QListWidgetItem(QtGui.QIcon('network-server.png'), name)
             self.node_type.addItem(item)
             self._node_models[item] = QtGui.QStandardItemModel(0, 1)
         new_item('Controller')
@@ -142,8 +142,6 @@ class MainForm(QtGui.QMainWindow):
 
         self.interfaces = NetworkListView()
         self.interfaces.setIconSize(QtCore.QSize(64, 64))
-        # Can't do this before self.interfaces exists
-        self.node_type.setCurrentRow(0)
         self.interfaces.current_changed.connect(self._interface_changed)
         self.interfaces.focused.connect(self._interface_focused)
         pane_layout.addWidget(self.interfaces, 100)
@@ -456,9 +454,9 @@ class MainForm(QtGui.QMainWindow):
                 if d['type'] == 'interface':
                     item.setIcon(QtGui.QIcon('network-wired.png'))
                 elif d['type'] == 'ovs_bridge':
-                    item.setIcon(QtGui.QIcon('bridge.svgz'))
+                    item.setIcon(QtGui.QIcon('bridge.png'))
                 elif i['type'] == 'vlan':
-                    item.setIcon(QtGui.QIcon('network-workgroup.svgz'))
+                    item.setIcon(QtGui.QIcon('network-workgroup.png'))
                 item.setText(d['name'])
                 item.setData(new_data)
                 self._add_item(item, current_model, self._interface_models)
@@ -469,9 +467,9 @@ class MainForm(QtGui.QMainWindow):
                     if i['type'] == 'interface':
                         nested_item.setIcon(QtGui.QIcon('network-wired.png'))
                     elif i['type'] == 'vlan':
-                        nested_item.setIcon(QtGui.QIcon('network-workgroup.svgz'))
+                        nested_item.setIcon(QtGui.QIcon('network-workgroup.png'))
                     elif i['type'] == 'ovs_bond':
-                        nested_item.setIcon(QtGui.QIcon('repository.svgz'))
+                        nested_item.setIcon(QtGui.QIcon('repository.png'))
                     nested_item.setText(i['name'])
                     nested_item.setData(i)
                     self._add_item(nested_item, nested_model)
@@ -659,7 +657,7 @@ class MainForm(QtGui.QMainWindow):
             current_item = self.node_type.currentItem()
             current_model = self._node_models[current_item]
             bridge_name = 'br-ex'
-            item = QtGui.QStandardItem(QtGui.QIcon('bridge.svgz'), bridge_name)
+            item = QtGui.QStandardItem(QtGui.QIcon('bridge.png'), bridge_name)
             item.setData({'type': 'ovs_bridge',
                           'name': bridge_name,
                           'use_dhcp': False,
@@ -675,7 +673,7 @@ class MainForm(QtGui.QMainWindow):
 
     def _add_vlan(self):
         def new_item():
-            item = QtGui.QStandardItem(QtGui.QIcon('network-workgroup.svgz'),
+            item = QtGui.QStandardItem(QtGui.QIcon('network-workgroup.png'),
                                        'VLAN')
             item.setData({'type': 'vlan',
                           'vlan_id': '',
@@ -708,7 +706,7 @@ class MainForm(QtGui.QMainWindow):
                 raise RuntimeError('Can only add bonds to OVS bridges')
             current_model = self._interface_models[current_item]
             bond_name = 'bond1'
-            item = QtGui.QStandardItem(QtGui.QIcon('repository.svgz'),
+            item = QtGui.QStandardItem(QtGui.QIcon('repository.png'),
                                        bond_name)
             item.setData({'type': 'ovs_bond',
                           'name': bond_name,
