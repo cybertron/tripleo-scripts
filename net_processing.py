@@ -283,6 +283,8 @@ def _process_network_config(d, filename):
     belong in the output files, or that needs to be adjusted/added.  This
     function is responsible for doing that.
     """
+    if d['mtu'] == -1:
+        del d['mtu']
     if d['type'] == 'interface' or d['type'] == 'ovs_bridge':
         network = d['network']
         del d['network']
@@ -322,6 +324,8 @@ def _process_network_config(d, filename):
 
 def _process_bridge_members(nd):
     """The same as _process_network_config, except for bridge members"""
+    if d['mtu'] == -1:
+        del d['mtu']
     if nd['type'] == 'vlan':
         network = nd['network']
         del nd['network']

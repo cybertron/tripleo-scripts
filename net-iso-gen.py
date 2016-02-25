@@ -31,7 +31,7 @@ import net_processing
 
 
 DATA_MAJOR = 0
-DATA_MINOR = 3
+DATA_MINOR = 4
 
 
 def get_current_item(model):
@@ -178,6 +178,14 @@ class MainForm(QtGui.QMainWindow):
         self.primary = QtGui.QCheckBox()
         self.primary.stateChanged.connect(self._primary_changed)
         input_layout.addWidget(PairWidget('Primary', self.primary))
+
+        self.mtu = QtGui.QSpinBox()
+        self.mtu.setMinimum(-1)
+        self.mtu.setMaximum(100000)
+        self.mtu.setToolTip('A value of -1 will cause the default MTU to be '
+                            'used')
+        self.mtu.valueChanged.connect(self._mtu_changed)
+        input_layout.addWidget(PairWidget('MTU', self.mtu))
 
         self.device = QtGui.QLineEdit()
         self.device.textEdited.connect(self._device_changed)
@@ -463,7 +471,7 @@ class MainForm(QtGui.QMainWindow):
                     item.setIcon(QtGui.QIcon('network-wired.png'))
                 elif d['type'] == 'ovs_bridge':
                     item.setIcon(QtGui.QIcon('bridge.png'))
-                elif i['type'] == 'vlan':
+                elif d['type'] == 'vlan':
                     item.setIcon(QtGui.QIcon('network-workgroup.png'))
                 item.setText(d['name'])
                 item.setData(new_data)
@@ -647,6 +655,7 @@ class MainForm(QtGui.QMainWindow):
                       'routes': [],
                       'network': network,
                       'primary': True,
+                      'mtu': -1,
                       })
         return item
 
@@ -688,6 +697,7 @@ class MainForm(QtGui.QMainWindow):
                           'routes': [],
                           'members': [],
                           'network': 'None',
+                          'mtu': -1,
                           })
             self._add_item(item, current_model, self._interface_models)
         else:
@@ -704,6 +714,7 @@ class MainForm(QtGui.QMainWindow):
                           'network': 'External',
                           'name': 'VLAN',
                           'device': '',
+                          'mtu': -1,
                           })
             return item
 
@@ -736,6 +747,7 @@ class MainForm(QtGui.QMainWindow):
                           'ovs_options':
                               '{get_param: BondInterfaceOvsOptions}',
                           'network': 'None',
+                          'mtu': -1,
                           })
             self._add_item(item, current_model)
         else:
@@ -776,6 +788,10 @@ class MainForm(QtGui.QMainWindow):
             self.device.setText(d['device'])
         else:
             self.device.setText('')
+        if 'mtu' in d:
+            self.mtu.setValue(d['mtu'])
+        else:
+            self.mtu.setValue(-1)
 
     def _network_type_changed(self, index):
         new_name = self.network_type.currentText()
@@ -831,6 +847,17 @@ class MainForm(QtGui.QMainWindow):
             self._error('Cannot set VLAN device on non-VLAN')
         d = current_item.data()
         d['device'] = text
+        current_item.setData(d)
+
+    def _mtu_changed(self, value):
+        if self._last_selected is self.interfaces:
+            current_item = get_current_item(self.interfaces)
+        elif self._last_selected is self.nested_interfaces:
+            current_item = get_current_item(self.nested_interfaces)
+        else:
+            self._error('Cannot set MTU on top-level nodes')
+        d = current_item.data()
+        d['mtu'] = value
         current_item.setData(d)
 
 
