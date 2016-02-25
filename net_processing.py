@@ -324,8 +324,8 @@ def _process_network_config(d, filename):
 
 def _process_bridge_members(nd):
     """The same as _process_network_config, except for bridge members"""
-    if d['mtu'] == -1:
-        del d['mtu']
+    if nd['mtu'] == -1:
+        del nd['mtu']
     if nd['type'] == 'vlan':
         network = nd['network']
         del nd['network']
