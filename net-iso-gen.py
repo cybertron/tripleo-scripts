@@ -519,10 +519,10 @@ class MainForm(QtGui.QMainWindow):
         The dict must be structured the same as the output from _global_to_dict
         """
         if data['major'] != DATA_MAJOR or data['minor'] > DATA_MINOR:
-            raise RuntimeError('Loaded data version %d.%d is not compatible '
-                               'with current version %d.%d' %
-                               (data['major'], data['minor'],
-                                DATA_MAJOR, DATA_MINOR))
+            self._error('Loaded data version %d.%d is not compatible '
+                        'with current version %d.%d' %
+                        (data['major'], data['minor'],
+                         DATA_MAJOR, DATA_MINOR))
         self.control_mask.setValue(data['control']['mask'])
         self.control_route.setText(data['control']['route'])
         self.control_ec2.setText(data['control']['ec2'])
@@ -541,6 +541,10 @@ class MainForm(QtGui.QMainWindow):
         self.dns2.setText(data.get('dns2', ''))
         self.bond_options.setText(data.get('bond_options', ''))
 
+    def _error(self, message):
+        QtGui.QMessageBox.critical(self, 'Error', message)
+        raise RuntimeError(message)
+
     def _generate_templates(self):
         base_path = self.base_path.text()
 
@@ -549,8 +553,7 @@ class MainForm(QtGui.QMainWindow):
         try:
             net_processing._validate_config(data, global_data)
         except RuntimeError as e:
-            QtGui.QMessageBox.critical(self, 'Validation Error', str(e))
-            return
+            self._error(str(e))
         net_processing._write_nic_configs(data, base_path)
         # We need a fresh, unmolested copy of the dict for the following steps
         data = self._ui_to_dict()
@@ -648,6 +651,7 @@ class MainForm(QtGui.QMainWindow):
         return item
 
     def _add_interface(self):
+        err_msg = 'Can only add interfaces to top-level nodes and bridges.'
         if self._last_selected is self.node_type:
             current_item = self.node_type.currentItem()
             current_model = self._node_models[current_item]
@@ -656,13 +660,14 @@ class MainForm(QtGui.QMainWindow):
             self._add_item(item, current_model, self._interface_models)
         elif self._last_selected is self.interfaces:
             current_item = get_current_item(self.interfaces)
+            if current_item.data()['type'] != 'ovs_bridge':
+                self._error(err_msg)
             current_model = self._interface_models[current_item]
             nic_name = self._next_nic_name()
             item = self._new_nic_item(nic_name, 'None')
             self._add_item(item, current_model)
         else:
-            raise RuntimeError('Can only add interfaces to top-level nodes '
-                               'and bridges.')
+            self._error(err_msg)
 
     def _add_item(self, item, model, submodels=None):
         if submodels is not None:
@@ -686,7 +691,7 @@ class MainForm(QtGui.QMainWindow):
                           })
             self._add_item(item, current_model, self._interface_models)
         else:
-            raise RuntimeError('Can only add bridges to top-level nodes')
+            self._error('Can only add bridges to top-level nodes')
 
     def _add_vlan(self):
         def new_item():
@@ -713,14 +718,14 @@ class MainForm(QtGui.QMainWindow):
             item = new_item()
             self._add_item(item, current_model)
         else:
-            raise RuntimeError('Can only add VLANs to top-level nodes and '
-                               'bridges')
+            self._error('Can only add VLANs to top-level nodes and bridges')
 
     def _add_bond(self):
+        err_msg = 'Can only add bonds to OVS bridges'
         if self._last_selected is self.interfaces:
             current_item = get_current_item(self.interfaces)
             if current_item.data()['type'] != 'ovs_bridge':
-                raise RuntimeError('Can only add bonds to OVS bridges')
+                self._error(err_msg)
             current_model = self._interface_models[current_item]
             bond_name = 'bond1'
             item = QtGui.QStandardItem(QtGui.QIcon('repository.png'),
@@ -734,11 +739,11 @@ class MainForm(QtGui.QMainWindow):
                           })
             self._add_item(item, current_model)
         else:
-            raise RuntimeError('Can only add bonds to OVS bridges')
+            self._error(err_msg)
 
     def _delete_current(self):
         if self._last_selected is self.node_type:
-            raise RuntimeError('Cannot delete top-level node type')
+            self._error('Cannot delete top-level node type')
         elif self._last_selected is self.interfaces:
             current_index = self.interfaces.currentIndex()
             current_index.model().takeRow(current_index.row())
@@ -779,7 +784,7 @@ class MainForm(QtGui.QMainWindow):
         elif self._last_selected is self.nested_interfaces:
             current_item = get_current_item(self.nested_interfaces)
         else:
-            raise RuntimeError('Cannot change network type of nodes')
+            self._error('Cannot change network type of nodes')
         d = current_item.data()
         d['network'] = new_name
         current_item.setData(d)
@@ -796,7 +801,7 @@ class MainForm(QtGui.QMainWindow):
             # input and when it's changed programmatically, which causes
             # this error to be raised incorrectly.
             pass
-            #raise RuntimeError('Cannot set primary on top-level interfaces')
+            #self._error('Cannot set primary on top-level interfaces')
 
     def _name_changed(self, text):
         if self._last_selected is self.interfaces:
@@ -804,7 +809,7 @@ class MainForm(QtGui.QMainWindow):
         elif self._last_selected is self.nested_interfaces:
             current_item = get_current_item(self.nested_interfaces)
         else:
-            raise RuntimeError('Cannot change name of node types')
+            self._error('Cannot change name of node types')
         current_item.setText(text)
         d = current_item.data()
         d['name'] = self.item_name.text()
@@ -814,7 +819,7 @@ class MainForm(QtGui.QMainWindow):
         if self._last_selected is self.nested_interfaces:
             current_item = get_current_item(self.nested_interfaces)
         else:
-            raise RuntimeError('Cannot change bond members on non-bond')
+            self._error('Cannot change bond members on non-bond')
         d = current_item.data()
         d['nics'] = [self.bond_m1.text(), self.bond_m2.text()]
         current_item.setData(d)
@@ -823,7 +828,7 @@ class MainForm(QtGui.QMainWindow):
         if self._last_selected is self.nested_interfaces:
             current_item = get_current_item(self.nested_interfaces)
         else:
-            raise RuntimeError('Cannot set VLAN device on non-VLAN')
+            self._error('Cannot set VLAN device on non-VLAN')
         d = current_item.data()
         d['device'] = text
         current_item.setData(d)
