@@ -30,8 +30,8 @@ from PyQt4 import QtGui
 import net_processing
 
 
-DATA_MAJOR = 0
-DATA_MINOR = 4
+DATA_MAJOR = 1
+DATA_MINOR = 0
 
 
 def get_current_item(model):
@@ -91,6 +91,7 @@ class MainForm(QtGui.QMainWindow):
         # order and we get some timer errors at close.
         self._node_models = {}
         self._interface_models = {}
+        self._nested_models = {}
         self._last_selected = None
 
         self._setup_ui()
@@ -152,6 +153,12 @@ class MainForm(QtGui.QMainWindow):
         self.nested_interfaces.focused.connect(self._nested_focused)
         pane_layout.addWidget(self.nested_interfaces, 100)
 
+        self.leaf_interfaces = NetworkListView()
+        self.leaf_interfaces.setIconSize(QtCore.QSize(64, 64))
+        self.leaf_interfaces.current_changed.connect(self._leaf_changed)
+        self.leaf_interfaces.focused.connect(self._leaf_focused)
+        pane_layout.addWidget(self.leaf_interfaces, 100)
+
         # Can't do this before self.nested_interfaces exists
         self.node_type.setCurrentRow(0)
         self._last_selected = self.node_type
@@ -190,17 +197,6 @@ class MainForm(QtGui.QMainWindow):
         self.device = QtGui.QLineEdit()
         self.device.textEdited.connect(self._device_changed)
         input_layout.addWidget(PairWidget('VLAN Bond', self.device))
-
-        self.bond_group = QtGui.QGroupBox('Bond Options')
-        bond_layout = QtGui.QVBoxLayout()
-        self.bond_group.setLayout(bond_layout)
-        self.bond_m1 = QtGui.QLineEdit()
-        self.bond_m1.textEdited.connect(self._bond_members_changed)
-        bond_layout.addWidget(PairWidget('First NIC', self.bond_m1))
-        self.bond_m2 = QtGui.QLineEdit()
-        self.bond_m2.textEdited.connect(self._bond_members_changed)
-        bond_layout.addWidget(PairWidget('Second NIC', self.bond_m2))
-        input_layout.addWidget(self.bond_group)
 
         input_layout.addStretch()
 
@@ -432,6 +428,21 @@ class MainForm(QtGui.QMainWindow):
 
         :returns: dict representing the current UI state
         """
+        def process_leaf(model, d):
+            for i in range(model.rowCount()):
+                nd = copy.deepcopy(model.item(i).data())
+                d['members'].append(nd)
+
+        def process_bridge(model, d):
+            for i in range(model.rowCount()):
+                nd = copy.deepcopy(model.item(i).data())
+                d['members'].append(nd)
+                nd['members'] = []
+                if nd['type'] == 'ovs_bond':
+                    item = model.item(i)
+                    nested_model = self._nested_models[item]
+                    process_leaf(nested_model, nd)
+
         retval = {}
         for index, filename, _ in net_processing.TYPE_LIST:
             retval[filename] = []
@@ -443,9 +454,7 @@ class MainForm(QtGui.QMainWindow):
                 if d['type'] == 'ovs_bridge':
                     item = current_model.item(i)
                     nested_model = self._interface_models[item]
-                    for j in range(nested_model.rowCount()):
-                        nd = copy.deepcopy(nested_model.item(j).data())
-                        d['members'].append(nd)
+                    process_bridge(nested_model, d)
                 retval[filename].append(d)
         return retval
 
@@ -454,6 +463,28 @@ class MainForm(QtGui.QMainWindow):
 
         The dict must be structured the same as the output from _ui_to_dict.
         """
+        def populate(data, current_model, next_models):
+            for d in data:
+                new_data = copy.deepcopy(d)
+                new_data.pop('members', None)
+                item = QtGui.QStandardItem()
+                if d['type'] == 'interface':
+                    item.setIcon(QtGui.QIcon('network-wired.png'))
+                elif d['type'] == 'ovs_bridge':
+                    item.setIcon(QtGui.QIcon('bridge.png'))
+                elif d['type'] == 'ovs_bond':
+                    item.setIcon(QtGui.QIcon('repository.png'))
+                elif d['type'] == 'vlan':
+                    item.setIcon(QtGui.QIcon('network-workgroup.png'))
+                item.setText(d['name'])
+                item.setData(new_data)
+                self._add_item(item, current_model, next_models)
+                if next_models is self._interface_models:
+                    populate(d['members'], next_models[item],
+                             self._nested_models)
+                elif next_models is self._nested_models:
+                    populate(d['members'], next_models[item], None)
+
         self._interface_models = {}
         self._last_selected = None
         # Initialize all node models
@@ -463,32 +494,7 @@ class MainForm(QtGui.QMainWindow):
         for filename, all_data in data.items():
             index = net_processing._index_from_filename(filename)
             current_model = self._node_models[self.node_type.item(index)]
-            for d in all_data:
-                new_data = copy.deepcopy(d)
-                new_data.pop('members', None)
-                item = QtGui.QStandardItem()
-                if d['type'] == 'interface':
-                    item.setIcon(QtGui.QIcon('network-wired.png'))
-                elif d['type'] == 'ovs_bridge':
-                    item.setIcon(QtGui.QIcon('bridge.png'))
-                elif d['type'] == 'vlan':
-                    item.setIcon(QtGui.QIcon('network-workgroup.png'))
-                item.setText(d['name'])
-                item.setData(new_data)
-                self._add_item(item, current_model, self._interface_models)
-
-                nested_model = self._interface_models[item]
-                for i in d['members']:
-                    nested_item = QtGui.QStandardItem()
-                    if i['type'] == 'interface':
-                        nested_item.setIcon(QtGui.QIcon('network-wired.png'))
-                    elif i['type'] == 'vlan':
-                        nested_item.setIcon(QtGui.QIcon('network-workgroup.png'))
-                    elif i['type'] == 'ovs_bond':
-                        nested_item.setIcon(QtGui.QIcon('repository.png'))
-                    nested_item.setText(i['name'])
-                    nested_item.setData(i)
-                    self._add_item(nested_item, nested_model)
+            populate(all_data, current_model, self._interface_models)
         self._node_type_changed(None)
 
     def _global_to_dict(self):
@@ -581,13 +587,15 @@ class MainForm(QtGui.QMainWindow):
         if load_path:
             self.base_path.setText(load_path)
             data, global_data = net_processing._load(load_path)
-            self._dict_to_ui(data)
+            # Global first because that's where the version check happens
             self._dict_to_global(global_data)
+            self._dict_to_ui(data)
 
     def _node_type_changed(self, index):
         self.interfaces.setModel(
             self._node_models[self.node_type.currentItem()])
         self.nested_interfaces.setModel(QtGui.QStandardItemModel(0, 1))
+        self.leaf_interfaces.setModel(QtGui.QStandardItemModel(0, 1))
 
     def _node_type_focused(self):
         self._last_selected = self.node_type
@@ -597,9 +605,11 @@ class MainForm(QtGui.QMainWindow):
         if row >= 0:
             item = index.model().item(row)
             self.nested_interfaces.setModel(self._interface_models[item])
+            self.leaf_interfaces.setModel(QtGui.QStandardItemModel(0, 1))
             self._update_input(item)
         else:
             self.nested_interfaces.setModel(QtGui.QStandardItemModel(0, 1))
+            self.leaf_interfaces.setModel(QtGui.QStandardItemModel(0, 1))
 
     def _interface_focused(self):
         self._last_selected = self.interfaces
@@ -609,11 +619,22 @@ class MainForm(QtGui.QMainWindow):
         row = index.row()
         if row >= 0:
             item = index.model().item(row)
+            self.leaf_interfaces.setModel(self._nested_models[item])
             self._update_input(item)
 
     def _nested_focused(self):
         self._last_selected = self.nested_interfaces
         self._nested_changed(self.nested_interfaces.currentIndex())
+
+    def _leaf_changed(self, index):
+        row = index.row()
+        if row >= 0:
+            item = index.model().item(row)
+            self._update_input(item)
+
+    def _leaf_focused(self):
+        self._last_selected = self.leaf_interfaces
+        self._leaf_changed(self.leaf_interfaces.currentIndex())
 
     def _next_nic_name(self):
         """Guess a reasonable next nic number
@@ -642,6 +663,13 @@ class MainForm(QtGui.QMainWindow):
                 for j in range(nested.rowCount()):
                     nd = nested.item(j).data()
                     next_nic_num = calculate_from_data(nd, next_nic_num)
+                    if nd['type'] == 'ovs_bond':
+                        item = nested.item(j)
+                        leaf = self._nested_models[item]
+                        for k in range(leaf.rowCount()):
+                            ld = leaf.item(k).data()
+                            next_nic_num = calculate_from_data(ld,
+                                                               next_nic_num)
         nic_name = 'nic%d' % next_nic_num
         return nic_name
 
@@ -660,7 +688,8 @@ class MainForm(QtGui.QMainWindow):
         return item
 
     def _add_interface(self):
-        err_msg = 'Can only add interfaces to top-level nodes and bridges.'
+        err_msg = ('Can only add interfaces to top-level nodes, bridges, and '
+                   'bonds.')
         if self._last_selected is self.node_type:
             current_item = self.node_type.currentItem()
             current_model = self._node_models[current_item]
@@ -672,6 +701,14 @@ class MainForm(QtGui.QMainWindow):
             if current_item.data()['type'] != 'ovs_bridge':
                 self._error(err_msg)
             current_model = self._interface_models[current_item]
+            nic_name = self._next_nic_name()
+            item = self._new_nic_item(nic_name, 'None')
+            self._add_item(item, current_model, self._nested_models)
+        elif self._last_selected is self.nested_interfaces:
+            current_item = get_current_item(self.nested_interfaces)
+            if current_item.data()['type'] != 'ovs_bond':
+                self._error(err_msg)
+            current_model = self._nested_models[current_item]
             nic_name = self._next_nic_name()
             item = self._new_nic_item(nic_name, 'None')
             self._add_item(item, current_model)
@@ -727,7 +764,7 @@ class MainForm(QtGui.QMainWindow):
             current_item = get_current_item(self.interfaces)
             current_model = self._interface_models[current_item]
             item = new_item()
-            self._add_item(item, current_model)
+            self._add_item(item, current_model, self._nested_models)
         else:
             self._error('Can only add VLANs to top-level nodes and bridges')
 
@@ -743,13 +780,12 @@ class MainForm(QtGui.QMainWindow):
                                        bond_name)
             item.setData({'type': 'ovs_bond',
                           'name': bond_name,
-                          'nics': ['nic1', 'nic2'],
                           'ovs_options':
                               '{get_param: BondInterfaceOvsOptions}',
                           'network': 'None',
                           'mtu': -1,
                           })
-            self._add_item(item, current_model)
+            self._add_item(item, current_model, self._nested_models)
         else:
             self._error(err_msg)
 
@@ -778,12 +814,6 @@ class MainForm(QtGui.QMainWindow):
         else:
             self.primary.setDisabled(True)
         self.item_name.setText(d['name'])
-        if d['type'] == 'ovs_bond':
-            self.bond_m1.setText(d['nics'][0])
-            self.bond_m2.setText(d['nics'][1])
-        else:
-            self.bond_m1.setText('')
-            self.bond_m2.setText('')
         if 'device' in d:
             self.device.setText(d['device'])
         else:
@@ -799,6 +829,8 @@ class MainForm(QtGui.QMainWindow):
             current_item = get_current_item(self.interfaces)
         elif self._last_selected is self.nested_interfaces:
             current_item = get_current_item(self.nested_interfaces)
+        elif self._last_selected is self.leaf_interfaces:
+            current_item = get_current_item(self.leaf_interfaces)
         else:
             self._error('Cannot change network type of nodes')
         d = current_item.data()
@@ -824,20 +856,13 @@ class MainForm(QtGui.QMainWindow):
             current_item = get_current_item(self.interfaces)
         elif self._last_selected is self.nested_interfaces:
             current_item = get_current_item(self.nested_interfaces)
+        elif self._last_selected is self.leaf_interfaces:
+            current_item = get_current_item(self.leaf_interfaces)
         else:
             self._error('Cannot change name of node types')
         current_item.setText(text)
         d = current_item.data()
         d['name'] = self.item_name.text()
-        current_item.setData(d)
-
-    def _bond_members_changed(self, _):
-        if self._last_selected is self.nested_interfaces:
-            current_item = get_current_item(self.nested_interfaces)
-        else:
-            self._error('Cannot change bond members on non-bond')
-        d = current_item.data()
-        d['nics'] = [self.bond_m1.text(), self.bond_m2.text()]
         current_item.setData(d)
 
     def _device_changed(self, text):
@@ -854,6 +879,8 @@ class MainForm(QtGui.QMainWindow):
             current_item = get_current_item(self.interfaces)
         elif self._last_selected is self.nested_interfaces:
             current_item = get_current_item(self.nested_interfaces)
+        elif self._last_selected is self.leaf_interfaces:
+            current_item = get_current_item(self.leaf_interfaces)
         else:
             self._error('Cannot set MTU on top-level nodes')
         d = current_item.data()

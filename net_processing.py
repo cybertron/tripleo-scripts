@@ -166,6 +166,8 @@ def _write_nic_configs(data, base_path):
                 _process_network_config(i, filename)
                 for j in i.get('members', []):
                     _process_bridge_members(j)
+                    for k in j.get('members', []):
+                        _process_bond_members(k)
                 network_config.append(i)
             resource_string = yaml.safe_dump(resources,
                                                 default_flow_style=False)
@@ -358,13 +360,19 @@ def _process_bridge_members(nd):
         nd.pop('use_dhcp', None)
     elif nd['type'] == 'ovs_bond':
         nd.pop('network', None)
-        m1 = nd['nics'][0]
-        m2 = nd['nics'][1]
-        del nd['nics']
-        nd['members'] = [{'type': 'interface', 'name': m1, 'primary': True},
-                         {'type': 'interface', 'name': m2},
-                         ]
+        #nd['members'] = [{'type': 'interface', 'name': m1, 'primary': True},
+        #                 {'type': 'interface', 'name': m2},
+        #                 ]
     return
+
+def _process_bond_members(nd):
+    if nd['mtu'] == -1:
+        del nd['mtu']
+    if nd['type'] == 'interface':
+        nd.pop('addresses')
+        nd.pop('network')
+        nd.pop('use_dhcp')
+        nd.pop('routes')
 
 def _validate_config(data, global_data):
     _check_duplicate_vlans(data, global_data)
