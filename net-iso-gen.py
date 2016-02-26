@@ -210,15 +210,6 @@ class MainForm(QtGui.QMainWindow):
         self.primary.stateChanged.connect(self._primary_changed)
         interface_layout.addWidget(PairWidget('Primary', self.primary))
 
-        self.vlan_group = QtGui.QGroupBox('VLAN Options')
-        vlan_layout = QtGui.QVBoxLayout()
-        self.vlan_group.setLayout(vlan_layout)
-        self.vlan_group.setEnabled(False)
-        input_layout.addWidget(self.vlan_group)
-        self.device = QtGui.QLineEdit()
-        self.device.textEdited.connect(self._device_changed)
-        vlan_layout.addWidget(PairWidget('Bond Device', self.device))
-
         self.route_group = QtGui.QGroupBox('Route Options')
         route_layout = QtGui.QVBoxLayout()
         self.route_group.setLayout(route_layout)
@@ -612,14 +603,14 @@ class MainForm(QtGui.QMainWindow):
         global_data = self._global_to_dict()
         try:
             net_processing._validate_config(data, global_data)
+            net_processing._write_pickle(data, global_data, base_path)
+            net_processing._write_nic_configs(data, base_path)
+            # We need a fresh, unmolested copy of the dict for the following steps
+            data = self._ui_to_dict()
+            net_processing._write_net_env(data, global_data, base_path)
+            net_processing._write_net_iso(data, base_path)
         except RuntimeError as e:
             self._error(str(e))
-        net_processing._write_pickle(data, global_data, base_path)
-        net_processing._write_nic_configs(data, base_path)
-        # We need a fresh, unmolested copy of the dict for the following steps
-        data = self._ui_to_dict()
-        net_processing._write_net_env(data, global_data, base_path)
-        net_processing._write_net_iso(data, base_path)
         print 'Templates generated successfully'
 
     def _set_output_path(self):
@@ -888,10 +879,6 @@ class MainForm(QtGui.QMainWindow):
         else:
             self.route_group.setEnabled(False)
             self.network_group.setEnabled(True)
-        if d['type'] == 'vlan':
-            self.vlan_group.setEnabled(True)
-        else:
-            self.vlan_group.setEnabled(False)
         if d['type'] == 'interface':
             self.interface_group.setEnabled(True)
         else:
@@ -909,10 +896,6 @@ class MainForm(QtGui.QMainWindow):
         else:
             self.primary.setDisabled(True)
         self.item_name.setText(d['name'])
-        if 'device' in d:
-            self.device.setText(d['device'])
-        else:
-            self.device.setText('')
         if 'mtu' in d:
             self.mtu.setValue(d['mtu'])
         else:
@@ -989,15 +972,6 @@ class MainForm(QtGui.QMainWindow):
         current_item.setText(text)
         d = current_item.data()
         d['name'] = self.item_name.text()
-        current_item.setData(d)
-
-    def _device_changed(self, text):
-        if self._last_selected is self.nested_interfaces:
-            current_item = get_current_item(self.nested_interfaces)
-        else:
-            self._error('Cannot set VLAN device on non-VLAN')
-        d = current_item.data()
-        d['device'] = text
         current_item.setData(d)
 
     def _mtu_changed(self, value):

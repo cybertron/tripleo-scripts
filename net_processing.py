@@ -165,7 +165,7 @@ def _write_nic_configs(data, base_path):
             for i in node_data:
                 _process_network_config(i, filename)
                 for j in i.get('members', []):
-                    _process_bridge_members(j)
+                    _process_bridge_members(j, i.get('members', []))
                     for k in j.get('members', []):
                         _process_bond_members(k)
                 network_config.append(i)
@@ -348,14 +348,31 @@ def _process_network_config(d, filename):
     if 'routes' in d and not d['routes']:
         del d['routes']
 
-def _process_bridge_members(nd):
-    """The same as _process_network_config, except for bridge members"""
+def _find_bond(siblings):
+    bonds = [b for b in siblings if b['type'].endswith('_bond')]
+    if len(bonds) > 1:
+        raise RuntimeError('Multiple bonds found on one bridge')
+    try:
+        return bonds[0]
+    except IndexError:
+        return
+
+def _process_bridge_members(nd, siblings):
+    """The same as _process_network_config, except for bridge members
+
+    Also takes a siblings parameter that allows VLAN items to be
+    automatically associated with the appropriate device."""
     _process_all(nd)
     if nd['type'] == 'vlan':
         network = nd['network']
         del nd['network']
         del nd['members']
         nd.pop('name', None)
+        bond = _find_bond(siblings)
+        if bond is not None:
+            nd['device'] = bond['name']
+        if not nd['device']:
+            nd.pop('device', None)
         if network == 'External':
             # This shares some logic with _process_network_config. Refactor?
             nd['addresses'] = [{'ip_netmask':
@@ -365,8 +382,6 @@ def _process_bridge_members(nd):
                     'next_hop':
                         '{get_param: ExternalInterfaceDefaultRoute}'})
             nd['vlan_id'] = '{get_param: ExternalNetworkVlanID}'
-            if not nd['device']:
-                nd.pop('device', None)
         elif network == 'None':
             raise RuntimeError('VLANs must have a network set')
         else:
@@ -374,9 +389,9 @@ def _process_bridge_members(nd):
             nd['vlan_id'] = vlan_id
             netmask = '{get_param: %sIpSubnet}' % network
             nd['addresses'] = [{'ip_netmask': netmask}]
-            nd.pop('routes', None)
-            if not nd['device']:
-                nd.pop('device', None)
+            if not nd.get('routes'):
+                nd.pop('routes', None)
+
     elif nd['type'] == 'interface':
         nd.pop('network', None)
         nd.pop('addresses', None)
@@ -390,6 +405,8 @@ def _process_bridge_members(nd):
             del nd['ovs_options']
         nd.pop('bond_type', None)
         nd.pop('network', None)
+        if len(nd['members']) < 2:
+            raise RuntimeError('Bonds must contain at least two interfaces')
     if 'routes' in nd and not nd['routes']:
         del nd['routes']
 
