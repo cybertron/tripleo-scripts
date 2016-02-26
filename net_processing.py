@@ -225,7 +225,8 @@ def _write_net_env(data, global_data, base_path):
                                                    global_data[lower]['vlan']))
         write('DnsServers: ["%s", "%s"]' % (global_data['dns1'],
                                             global_data['dns2']))
-        write('BondInterfaceOvsOptions: %s' % global_data['bond_options'])
+        if global_data['bond_options']:
+            write('BondInterfaceOvsOptions: %s' % global_data['bond_options'])
 
 def _write_net_iso(data, base_path):
     """Write network-isolation.yaml based on the data passed in"""

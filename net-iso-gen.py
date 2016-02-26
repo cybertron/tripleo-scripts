@@ -438,7 +438,7 @@ class MainForm(QtGui.QMainWindow):
         general_layout.addWidget(PairWidget('DNS Servers', [self.dns1,
                                                             self.dns2]))
 
-        self.bond_options = QtGui.QLineEdit('bond_mode=balance-slb')
+        self.bond_options = QtGui.QLineEdit()
         general_layout.addWidget(PairWidget('OVS Bond Options', self.bond_options))
 
         generate_layout = QtGui.QHBoxLayout()
