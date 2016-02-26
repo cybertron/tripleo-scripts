@@ -48,6 +48,11 @@ parameters:
     default: ''
     description: IP address/subnet on the management network
     type: string
+  BondInterfaceOvsOptions:
+    default: 'bond_mode=active-backup'
+    description: The ovs_options string for the bond interface. Set things like
+                 lacp=active and/or bond_mode=balance-slb using this option.
+    type: string
   ExternalNetworkVlanID:
     default: 10
     description: Vlan ID for the external network traffic.
