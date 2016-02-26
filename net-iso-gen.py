@@ -31,7 +31,7 @@ import net_processing
 
 
 DATA_MAJOR = 1
-DATA_MINOR = 1
+DATA_MINOR = 2
 
 
 def get_current_item(model):
@@ -789,7 +789,6 @@ class MainForm(QtGui.QMainWindow):
                           'routes': [],
                           'network': 'External',
                           'name': 'VLAN',
-                          'device': '',
                           'mtu': -1,
                           })
             return item
