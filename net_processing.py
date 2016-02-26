@@ -185,7 +185,6 @@ def _write_pickle(data, global_data, base_path):
 
 def _write_net_env(data, global_data, base_path):
     """Write network-environment.yaml based on the data passed in"""
-    _write_pickle(data, global_data, base_path)
     # This is simple YAML, so instead of generating it with the yaml
     # module, we'll just write it directly as text so we control the
     # formatting.
@@ -271,12 +270,25 @@ def _net_used(data, name, filename):
     """
     node_data = data[filename]
     for i in node_data:
-        if i['network'] == name:
+        if i.get('network', '') == name:
             return True
         for j in i['members']:
-            if j['network'] == name:
+            if j.get('network', '') == name:
                 return True
     return False
+
+def _process_all(d):
+    if 'mtu' in d and d['mtu'] == -1:
+        del d['mtu']
+    for m in d.get('members', []):
+        if m['type'] == 'route':
+            new_route = copy.deepcopy(m)
+            del new_route['name']
+            del new_route['type']
+            new_route.pop('members', None)
+            d['routes'].append(new_route)
+    if d['type'] == 'ovs_bridge' or d['type'] == 'ovs_bond':
+        d['members'] = [m for m in d['members'] if m['type'] != 'route']
 
 def _process_network_config(d, filename):
     """Tweak config data for top-level interfaces and bridges
@@ -285,8 +297,7 @@ def _process_network_config(d, filename):
     belong in the output files, or that needs to be adjusted/added.  This
     function is responsible for doing that.
     """
-    if d['mtu'] == -1:
-        del d['mtu']
+    _process_all(d)
     if d['type'] == 'interface' or d['type'] == 'ovs_bridge':
         network = d['network']
         del d['network']
@@ -301,8 +312,8 @@ def _process_network_config(d, filename):
                         {'list_join': ['/', ['{get_param: ControlPlaneIp}',
                                             '{get_param: ControlPlaneSubnetCidr}'
                                             ]]}}]
-            d['routes'] = [{'ip_netmask': '169.254.169.254/32',
-                            'next_hop': '{get_param: EC2MetadataIp}'}]
+            d['routes'].append({'ip_netmask': '169.254.169.254/32',
+                                'next_hop': '{get_param: EC2MetadataIp}'})
             # HACK!  Typically non-controller nodes will need this, but
             # it's not a safe assumption.  It's also not necessarily true
             # that controller nodes don't need it.
@@ -312,34 +323,35 @@ def _process_network_config(d, filename):
         elif network == 'External':
             d['addresses'] = [{'ip_netmask':
                                     '{get_param: ExternalIpSubnet}'}]
-            d['routes'] = [
+            d['routes'].append(
                 {'ip_netmask': '0.0.0.0/0',
                     'next_hop':
-                        '{get_param: ExternalInterfaceDefaultRoute}'}]
+                        '{get_param: ExternalInterfaceDefaultRoute}'})
         elif network == 'None':
             d.pop('addresses', None)
             d.pop('routes', None)
         else:
             d['addresses'] = [{'ip_netmask':
                                    '{get_param: %sIpSubnet}' % network}]
-            del d['routes']
+    if 'routes' in d and not d['routes']:
+        del d['routes']
 
 def _process_bridge_members(nd):
     """The same as _process_network_config, except for bridge members"""
-    if nd['mtu'] == -1:
-        del nd['mtu']
+    _process_all(nd)
     if nd['type'] == 'vlan':
         network = nd['network']
         del nd['network']
+        del nd['members']
         nd.pop('name', None)
         if network == 'External':
             # This shares some logic with _process_network_config. Refactor?
             nd['addresses'] = [{'ip_netmask':
                                     '{get_param: ExternalIpSubnet}'}]
-            nd['routes'] = [
+            nd['routes'].append(
                 {'ip_netmask': '0.0.0.0/0',
                     'next_hop':
-                        '{get_param: ExternalInterfaceDefaultRoute}'}]
+                        '{get_param: ExternalInterfaceDefaultRoute}'})
             nd['vlan_id'] = '{get_param: ExternalNetworkVlanID}'
             if not nd['device']:
                 nd.pop('device', None)
@@ -358,16 +370,14 @@ def _process_bridge_members(nd):
         nd.pop('addresses', None)
         nd.pop('routes', None)
         nd.pop('use_dhcp', None)
+        nd.pop('members', None)
     elif nd['type'] == 'ovs_bond':
         nd.pop('network', None)
-        #nd['members'] = [{'type': 'interface', 'name': m1, 'primary': True},
-        #                 {'type': 'interface', 'name': m2},
-        #                 ]
-    return
+    if 'routes' in nd and not nd['routes']:
+        del nd['routes']
 
 def _process_bond_members(nd):
-    if nd['mtu'] == -1:
-        del nd['mtu']
+    _process_all(nd)
     if nd['type'] == 'interface':
         nd.pop('addresses')
         nd.pop('network')
@@ -413,9 +423,13 @@ def _check_duplicate_networks(data):
     for filename, d in data.items():
         seen = set()
         for i in d:
+            if 'network' not in i:
+                continue
             if i['network'] in seen and i['network'] != 'None':
                 raise RuntimeError(err_msg % (i['network'], filename))
             for j in i['members']:
+                if 'network' not in j:
+                    continue
                 if j['network'] in seen and j['network'] != 'None':
                     raise RuntimeError(err_msg % (j['network'], filename))
                 seen.add(j['network'])

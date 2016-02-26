@@ -118,6 +118,9 @@ class MainForm(QtGui.QMainWindow):
         add_bond = QtGui.QPushButton('Add Bond')
         add_bond.clicked.connect(self._add_bond)
         button_layout.addWidget(add_bond)
+        add_route = QtGui.QPushButton('Add Route')
+        add_route.clicked.connect(self._add_route)
+        button_layout.addWidget(add_route)
         delete = QtGui.QPushButton('Delete')
         delete.clicked.connect(self._delete_current)
         button_layout.addWidget(delete)
@@ -197,6 +200,20 @@ class MainForm(QtGui.QMainWindow):
         self.device = QtGui.QLineEdit()
         self.device.textEdited.connect(self._device_changed)
         input_layout.addWidget(PairWidget('VLAN Bond', self.device))
+
+        self.route_group = QtGui.QGroupBox('Route Options')
+        route_layout = QtGui.QVBoxLayout()
+        self.route_group.setLayout(route_layout)
+        input_layout.addWidget(self.route_group)
+        self.route_netmask = QtGui.QLineEdit()
+        self.route_netmask.textEdited.connect(self._route_changed)
+        route_layout.addWidget(PairWidget('CIDR', self.route_netmask))
+        self.route_next_hop = QtGui.QLineEdit()
+        self.route_next_hop.textEdited.connect(self._route_changed)
+        route_layout.addWidget(PairWidget('Next Hop', self.route_next_hop))
+        self.route_default = QtGui.QCheckBox()
+        self.route_default.stateChanged.connect(self._route_changed)
+        route_layout.addWidget(PairWidget('Default', self.route_default))
 
         input_layout.addStretch()
 
@@ -438,7 +455,7 @@ class MainForm(QtGui.QMainWindow):
                 nd = copy.deepcopy(model.item(i).data())
                 d['members'].append(nd)
                 nd['members'] = []
-                if nd['type'] == 'ovs_bond':
+                if nd['type'] == 'ovs_bond' or nd['type'] == 'vlan':
                     item = model.item(i)
                     nested_model = self._nested_models[item]
                     process_leaf(nested_model, nd)
@@ -451,10 +468,9 @@ class MainForm(QtGui.QMainWindow):
             for i in range(current_model.rowCount()):
                 d = copy.deepcopy(current_model.item(i).data())
                 d['members'] = []
-                if d['type'] == 'ovs_bridge':
-                    item = current_model.item(i)
-                    nested_model = self._interface_models[item]
-                    process_bridge(nested_model, d)
+                item = current_model.item(i)
+                nested_model = self._interface_models[item]
+                process_bridge(nested_model, d)
                 retval[filename].append(d)
         return retval
 
@@ -568,6 +584,7 @@ class MainForm(QtGui.QMainWindow):
             net_processing._validate_config(data, global_data)
         except RuntimeError as e:
             self._error(str(e))
+        net_processing._write_pickle(data, global_data, base_path)
         net_processing._write_nic_configs(data, base_path)
         # We need a fresh, unmolested copy of the dict for the following steps
         data = self._ui_to_dict()
@@ -789,6 +806,31 @@ class MainForm(QtGui.QMainWindow):
         else:
             self._error(err_msg)
 
+    def _add_route(self):
+        def new_item():
+            item = QtGui.QStandardItem(QtGui.QIcon('arrow-right.png'),
+                                       'Route')
+            item.setData({'type': 'route',
+                          'ip_netmask': '0.0.0.0/0',
+                          'next_hop': '0.0.0.0',
+                          'name': 'Route',
+                          'default': False,
+                          })
+            return item
+
+        if self._last_selected is self.interfaces:
+            current_item = get_current_item(self.interfaces)
+            current_model = self._interface_models[current_item]
+            item = new_item()
+            self._add_item(item, current_model, self._nested_models)
+        elif self._last_selected is self.nested_interfaces:
+            current_item = get_current_item(self.nested_interfaces)
+            current_model = self._nested_models[current_item]
+            item = new_item()
+            self._add_item(item, current_model)
+        else:
+            self._error('Cannot add route to this device')
+
     def _delete_current(self):
         if self._last_selected is self.node_type:
             self._error('Cannot delete top-level node type')
@@ -807,7 +849,7 @@ class MainForm(QtGui.QMainWindow):
         """
         d = item.data()
         self.network_type.setCurrentIndex(
-            self.network_type.findText(d['network']))
+            self.network_type.findText(d.get('network', 'None')))
         if 'primary' in d:
             self.primary.setDisabled(False)
             self.primary.setChecked(d['primary'])
@@ -822,6 +864,13 @@ class MainForm(QtGui.QMainWindow):
             self.mtu.setValue(d['mtu'])
         else:
             self.mtu.setValue(-1)
+        if 'ip_netmask' in d:
+            self.route_netmask.setText(d['ip_netmask'])
+            self.route_next_hop.setText(d['next_hop'])
+            self.route_default.setChecked(d['default'])
+        else:
+            self.route_netmask.setText('')
+            self.route_next_hop.setText('')
 
     def _network_type_changed(self, index):
         new_name = self.network_type.currentText()
@@ -834,22 +883,25 @@ class MainForm(QtGui.QMainWindow):
         else:
             self._error('Cannot change network type of nodes')
         d = current_item.data()
-        d['network'] = new_name
+        if 'network' in d:
+            d['network'] = new_name
         current_item.setData(d)
 
     def _primary_changed(self, state):
         if self._last_selected is self.nested_interfaces:
             current_item = get_current_item(self.nested_interfaces)
-            d = current_item.data()
-            d['primary'] = self.primary.isChecked()
-            current_item.setData(d)
+        if self._last_selected is self.leaf_interfaces:
+            current_item = get_current_item(self.leaf_interfaces)
         else:
             # This should be a RuntimeError, but right now we don't
             # differentiate properly between when this changes due to user
             # input and when it's changed programmatically, which causes
             # this error to be raised incorrectly.
-            pass
+            return
             #self._error('Cannot set primary on top-level interfaces')
+        d = current_item.data()
+        d['primary'] = self.primary.isChecked()
+        current_item.setData(d)
 
     def _name_changed(self, text):
         if self._last_selected is self.interfaces:
@@ -885,6 +937,19 @@ class MainForm(QtGui.QMainWindow):
             self._error('Cannot set MTU on top-level nodes')
         d = current_item.data()
         d['mtu'] = value
+        current_item.setData(d)
+
+    def _route_changed(self, _):
+        if self._last_selected is self.nested_interfaces:
+            current_item = get_current_item(self.nested_interfaces)
+        elif self._last_selected is self.leaf_interfaces:
+            current_item = get_current_item(self.leaf_interfaces)
+        else:
+            self._error('Cannot set route options here')
+        d = current_item.data()
+        d['ip_netmask'] = self.route_netmask.text()
+        d['next_hop'] = self.route_next_hop.text()
+        d['default'] = self.route_default.isChecked()
         current_item.setData(d)
 
 
