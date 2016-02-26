@@ -384,6 +384,11 @@ def _process_bridge_members(nd):
         nd.pop('use_dhcp', None)
         nd.pop('members', None)
     elif nd['type'] == 'ovs_bond':
+        if nd.get('bond_type', 'ovs') != 'ovs':
+            nd['type'] = 'linux_bond'
+            nd['bonding_options'] = nd['ovs_options']
+            del nd['ovs_options']
+        nd.pop('bond_type', None)
         nd.pop('network', None)
     if 'routes' in nd and not nd['routes']:
         del nd['routes']

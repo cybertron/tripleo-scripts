@@ -31,7 +31,7 @@ import net_processing
 
 
 DATA_MAJOR = 1
-DATA_MINOR = 0
+DATA_MINOR = 1
 
 
 def get_current_item(model):
@@ -233,6 +233,17 @@ class MainForm(QtGui.QMainWindow):
         self.route_default = QtGui.QCheckBox()
         self.route_default.stateChanged.connect(self._route_changed)
         route_layout.addWidget(PairWidget('Default', self.route_default))
+
+        self.bond_group = QtGui.QGroupBox('Bond Options')
+        bond_layout = QtGui.QVBoxLayout()
+        self.bond_group.setLayout(bond_layout)
+        self.bond_group.setEnabled(False)
+        input_layout.addWidget(self.bond_group)
+        self.bond_type = QtGui.QComboBox()
+        self.bond_type.addItem('OVS')
+        self.bond_type.addItem('Linux')
+        self.bond_type.currentIndexChanged.connect(self._bond_changed)
+        bond_layout.addWidget(PairWidget('Bond Type', self.bond_type))
 
         input_layout.addStretch()
 
@@ -810,12 +821,20 @@ class MainForm(QtGui.QMainWindow):
             bond_name = 'bond1'
             item = QtGui.QStandardItem(QtGui.QIcon('repository.png'),
                                        bond_name)
+            # The ovs_bond type is a historical artifact from when these only
+            # supported OVS bonds.  Since it turns out that linux_bonds are
+            # very similar, the same object is used, but the type is left
+            # alone for compatibility purposes.  It will be mapped to the
+            # appropriate value in net_processing.
+            # NOTE(bnemec): bond_type was added later - you cannot assume all
+            # bond items will have that key.
             item.setData({'type': 'ovs_bond',
                           'name': bond_name,
                           'ovs_options':
                               '{get_param: BondInterfaceOvsOptions}',
                           'network': 'None',
                           'mtu': -1,
+                          'bond_type': 'ovs',
                           })
             self._add_item(item, current_model, self._nested_models)
         else:
@@ -877,6 +896,10 @@ class MainForm(QtGui.QMainWindow):
             self.interface_group.setEnabled(True)
         else:
             self.interface_group.setEnabled(False)
+        if d['type'] == 'ovs_bond':
+            self.bond_group.setEnabled(True)
+        else:
+            self.bond_group.setEnabled(False)
 
         self.network_type.setCurrentIndex(
             self.network_type.findText(d.get('network', 'None')))
@@ -901,8 +924,13 @@ class MainForm(QtGui.QMainWindow):
         else:
             self.route_netmask.setText('')
             self.route_next_hop.setText('')
+        if d['type'] == 'ovs_bond':
+            if d.get('bond_type', 'ovs') == 'ovs':
+                self.bond_type.setCurrentIndex(0)
+            else:
+                self.bond_type.setCurrentIndex(1)
 
-    def _network_type_changed(self, index):
+    def _network_type_changed(self, _):
         new_name = self.network_type.currentText()
         if self._last_selected is self.interfaces:
             current_item = get_current_item(self.interfaces)
@@ -998,6 +1026,13 @@ class MainForm(QtGui.QMainWindow):
         d['default'] = self.route_default.isChecked()
         current_item.setData(d)
 
+    def _bond_changed(self, _):
+        new_name = self.bond_type.currentText()
+        if self._last_selected is self.nested_interfaces:
+            current_item = get_current_item(self.nested_interfaces)
+        d = current_item.data()
+        d['bond_type'] = new_name.lower()
+        current_item.setData(d)
 
 if __name__ == '__main__':
     app = QtGui.QApplication(sys.argv)
