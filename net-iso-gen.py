@@ -57,8 +57,10 @@ class PairWidget(QtGui.QWidget):
         try:
             for w in widget:
                 self.layout.addWidget(w)
+                self.label.setToolTip(w.toolTip())
         except TypeError:
             self.layout.addWidget(widget)
+            self.label.setToolTip(widget.toolTip())
 
 
 class NetworkListView(QtGui.QListView):
@@ -173,6 +175,11 @@ class MainForm(QtGui.QMainWindow):
         self.item_name.textEdited.connect(self._name_changed)
         input_layout.addWidget(PairWidget('Name', self.item_name))
 
+        self.network_group = QtGui.QGroupBox('Network Options')
+        network_layout = QtGui.QVBoxLayout()
+        self.network_group.setLayout(network_layout)
+        self.network_group.setEnabled(False)
+        input_layout.addWidget(self.network_group)
         self.network_type = QtGui.QComboBox()
         self.network_type.addItem('None')
         self.network_type.addItem('ControlPlane')
@@ -183,27 +190,38 @@ class MainForm(QtGui.QMainWindow):
         self.network_type.addItem('Tenant')
         self.network_type.addItem('Management')
         self.network_type.currentIndexChanged.connect(self._network_type_changed)
-        input_layout.addWidget(PairWidget('Network', self.network_type))
-
-        self.primary = QtGui.QCheckBox()
-        self.primary.stateChanged.connect(self._primary_changed)
-        input_layout.addWidget(PairWidget('Primary', self.primary))
+        network_layout.addWidget(PairWidget('Network', self.network_type))
 
         self.mtu = QtGui.QSpinBox()
         self.mtu.setMinimum(-1)
-        self.mtu.setMaximum(100000)
+        self.mtu.setMaximum(65535)
         self.mtu.setToolTip('A value of -1 will cause the default MTU to be '
                             'used')
         self.mtu.valueChanged.connect(self._mtu_changed)
-        input_layout.addWidget(PairWidget('MTU', self.mtu))
+        network_layout.addWidget(PairWidget('MTU', self.mtu))
 
+        self.interface_group = QtGui.QGroupBox('Interface Options')
+        interface_layout = QtGui.QVBoxLayout()
+        self.interface_group.setLayout(interface_layout)
+        self.interface_group.setEnabled(False)
+        input_layout.addWidget(self.interface_group)
+        self.primary = QtGui.QCheckBox()
+        self.primary.stateChanged.connect(self._primary_changed)
+        interface_layout.addWidget(PairWidget('Primary', self.primary))
+
+        self.vlan_group = QtGui.QGroupBox('VLAN Options')
+        vlan_layout = QtGui.QVBoxLayout()
+        self.vlan_group.setLayout(vlan_layout)
+        self.vlan_group.setEnabled(False)
+        input_layout.addWidget(self.vlan_group)
         self.device = QtGui.QLineEdit()
         self.device.textEdited.connect(self._device_changed)
-        input_layout.addWidget(PairWidget('VLAN Bond', self.device))
+        vlan_layout.addWidget(PairWidget('Bond Device', self.device))
 
         self.route_group = QtGui.QGroupBox('Route Options')
         route_layout = QtGui.QVBoxLayout()
         self.route_group.setLayout(route_layout)
+        self.route_group.setEnabled(False)
         input_layout.addWidget(self.route_group)
         self.route_netmask = QtGui.QLineEdit()
         self.route_netmask.textEdited.connect(self._route_changed)
@@ -848,6 +866,21 @@ class MainForm(QtGui.QMainWindow):
         in sync.
         """
         d = item.data()
+        if d['type'] == 'route':
+            self.route_group.setEnabled(True)
+            self.network_group.setEnabled(False)
+        else:
+            self.route_group.setEnabled(False)
+            self.network_group.setEnabled(True)
+        if d['type'] == 'vlan':
+            self.vlan_group.setEnabled(True)
+        else:
+            self.vlan_group.setEnabled(False)
+        if d['type'] == 'interface':
+            self.interface_group.setEnabled(True)
+        else:
+            self.interface_group.setEnabled(False)
+
         self.network_type.setCurrentIndex(
             self.network_type.findText(d.get('network', 'None')))
         if 'primary' in d:
