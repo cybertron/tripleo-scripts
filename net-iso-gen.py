@@ -792,18 +792,13 @@ class MainForm(QtGui.QMainWindow):
                           })
             return item
 
-        if self._last_selected is self.node_type:
-            current_item = self.node_type.currentItem()
-            current_model = self._node_models[current_item]
-            item = new_item()
-            self._add_item(item, current_model, self._interface_models)
-        elif self._last_selected is self.interfaces:
+        if self._last_selected is self.interfaces:
             current_item = get_current_item(self.interfaces)
             current_model = self._interface_models[current_item]
             item = new_item()
             self._add_item(item, current_model, self._nested_models)
         else:
-            self._error('Can only add VLANs to top-level nodes and bridges')
+            self._error('Can only add VLANs to bridges')
 
     def _add_bond(self):
         err_msg = 'Can only add bonds to OVS bridges'
