@@ -193,32 +193,36 @@ def _write_net_env(data, global_data, base_path):
         def write(content):
             f.write('  ' + content + '\n')
         f.write(NETENV_HEADER)
-        if _net_used_all(data, 'ControlPlane'):
+        if _net_used_all(data, 'ControlPlane')[0]:
             write("ControlPlaneSubnetCidr: '%d'" %
                   global_data['control']['mask'])
             write('ControlPlaneDefaultRoute: %s' %
                   global_data['control']['route'])
             write('EC2MetadataIp: %s' % global_data['control']['ec2'])
-        if _net_used_all(data, 'External'):
+        external_used = _net_used_all(data, 'External')
+        if external_used[0]:
             write('ExternalNetCidr: %s' % global_data['external']['cidr'])
             write('ExternalAllocationPools: [{"start": "%s", '
                   '"end": "%s"}]' % (global_data['external']['start'],
                                      global_data['external']['end']))
             write('ExternalInterfaceDefaultRoute: %s' %
                   global_data['external']['gateway'])
-            write('ExternalNetworkVlanID: %d' %
-                  global_data['external']['vlan'])
+            if external_used[1]:
+                write('ExternalNetworkVlanID: %d' %
+                      global_data['external']['vlan'])
             write('NeutronExternalNetworkBridge: "%s"' %
                   global_data['external']['bridge'])
         for camel, lower in SIMILAR_NETS:
-            if _net_used_all(data, camel):
+            used = _net_used_all(data, camel)
+            if used[0]:
                 write('%sNetCidr: %s' % (camel, global_data[lower]['cidr']))
                 write('%sAllocationPools: [{"start": "%s", '
                     '"end": "%s"}]' % (camel,
                                        global_data[lower]['start'],
                                        global_data[lower]['end']))
-                write('%sNetworkVlanID: %d' % (camel,
-                                               global_data[lower]['vlan']))
+                if used[1]:
+                    write('%sNetworkVlanID: %d' % (camel,
+                                                   global_data[lower]['vlan']))
         write('DnsServers: ["%s", "%s"]' % (global_data['dns1'],
                                             global_data['dns2']))
         write('BondInterfaceOvsOptions: %s' % global_data['bond_options'])
@@ -247,35 +251,42 @@ def _write_net_iso_entry(f, net, data, basename=None):
         format_str = '  ' + content + '\n'
         f.write(format_str % (net, basename))
 
-    if _net_used_all(data, net):
+    if _net_used_all(data, net)[0]:
         f.write('  # %s\n' % net)
         write('OS::TripleO::Network::%s: '
               '../network/%s.yaml')
         write('OS::TripleO::Network::Ports::%sVipPort: '
               '../network/ports/%s.yaml')
     for _, filename, template_name in TYPE_LIST:
-        if _net_used(data, net, filename):
+        if _net_used(data, net, filename)[0]:
             write('OS::TripleO::' + template_name + '::Ports::%sPort: '
                   '../network/ports/%s.yaml')
 
 def _net_used_all(data, name):
     """Check whether a network is used in any nic-config file"""
-    return any([_net_used(data, name, fname) for fname, _ in data.items()])
+    return (any([_net_used(data, name, fname)[0]
+                 for fname, _ in data.items()]),
+            any([_net_used(data, name, fname)[1]
+                 for fname, _ in data.items()])
+            )
 
 def _net_used(data, name, filename):
     """Determine whether nics are configured to use a network
 
     Returns whether a nic in filename is configured to use the network
-    defined by name.  name is the camelcase form of the network.
+    defined by name.  The return value is in the form of a tuple - the first
+    element of the tuple is whether the network is used at all, the second
+    whether the network is used by a VLAN.  name is the camelcase form of the
+    network.
     """
     node_data = data[filename]
     for i in node_data:
         if i.get('network', '') == name:
-            return True
+            return True, i['type'] == 'vlan'
         for j in i['members']:
             if j.get('network', '') == name:
-                return True
-    return False
+                return True, j['type'] == 'vlan'
+    return False, False
 
 def _process_all(d):
     if 'mtu' in d and d['mtu'] == -1:
@@ -410,7 +421,7 @@ def _check_duplicate_vlans(data, global_data):
     seen = set()
     for name, d in global_data.items():
         try:
-            used = _net_used_all(data, _lower_to_camel(name))
+            used = _net_used_all(data, _lower_to_camel(name))[0]
             if d['vlan'] in seen and used:
                 raise RuntimeError('Duplicate VLAN found: %s' % d['vlan'])
             if used:
