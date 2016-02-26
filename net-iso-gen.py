@@ -97,6 +97,7 @@ class MainForm(QtGui.QMainWindow):
         self._last_selected = None
 
         self._setup_ui()
+        self._update_enabled_networks()
         self.show()
 
     def _setup_ui(self):
@@ -754,6 +755,7 @@ class MainForm(QtGui.QMainWindow):
         if submodels is not None:
             submodels[item] = QtGui.QStandardItemModel(0, 1)
         model.appendRow(item)
+        self._update_enabled_networks()
 
     def _add_bridge(self):
         if self._last_selected is self.node_type:
@@ -919,6 +921,22 @@ class MainForm(QtGui.QMainWindow):
         if 'network' in d:
             d['network'] = new_name
         current_item.setData(d)
+        self._update_enabled_networks()
+
+    def _update_enabled_networks(self):
+        data = self._ui_to_dict()
+        self.external_group.setEnabled(
+            net_processing._net_used_all(data, 'External')[0])
+        self.internal_group.setEnabled(
+            net_processing._net_used_all(data, 'InternalApi')[0])
+        self.storage_group.setEnabled(
+            net_processing._net_used_all(data, 'Storage')[0])
+        self.storage_mgmt_group.setEnabled(
+            net_processing._net_used_all(data, 'StorageMgmt')[0])
+        self.tenant_group.setEnabled(
+            net_processing._net_used_all(data, 'Tenant')[0])
+        self.management_group.setEnabled(
+            net_processing._net_used_all(data, 'Management')[0])
 
     def _primary_changed(self, state):
         if self._last_selected is self.nested_interfaces:
