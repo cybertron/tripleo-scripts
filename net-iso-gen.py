@@ -860,10 +860,13 @@ class MainForm(QtGui.QMainWindow):
             self._error('Cannot delete top-level node type')
         elif self._last_selected is self.interfaces:
             current_index = self.interfaces.currentIndex()
-            current_index.model().takeRow(current_index.row())
         elif self._last_selected is self.nested_interfaces:
             current_index = self.nested_interfaces.currentIndex()
-            current_index.model().takeRow(current_index.row())
+        elif self._last_selected is self.leaf_interfaces:
+            current_index = self.leaf_interfaces.currentIndex()
+        else:
+            self._error('Cannot delete.  Unexpected UI state.')
+        current_index.model().takeRow(current_index.row())
 
     def _update_input(self, item):
         """Update UI input elements to match selected item
