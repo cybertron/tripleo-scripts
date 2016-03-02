@@ -67,10 +67,25 @@ class TestValidations(unittest.TestCase):
             global_data = json.loads(f.read())
         net_processing._check_duplicate_vlans(data, global_data)
 
+    def test_vlans_invalid(self):
+        with open('test-data/duplicate-vlans/nic-input.json') as f:
+            data = json.loads(f.read())
+        with open('test-data/duplicate-vlans/global-input.json') as f:
+            global_data = json.loads(f.read())
+        self.assertRaises(RuntimeError, net_processing._check_duplicate_vlans,
+                          data, global_data)
+
     def test_networks_valid(self):
         with open('test-data/all-the-things/nic-input.json') as f:
             data = json.loads(f.read())
         net_processing._check_duplicate_networks(data)
+
+    def test_networks_invalid(self):
+        with open('test-data/duplicate-networks/nic-input.json') as f:
+            data = json.loads(f.read())
+        self.assertRaises(RuntimeError,
+                          net_processing._check_duplicate_networks,
+                          data)
 
 
 if __name__ == '__main__':
