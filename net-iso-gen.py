@@ -513,6 +513,8 @@ class MainForm(QtGui.QMainWindow):
                     item.setIcon(QtGui.QIcon('repository.png'))
                 elif d['type'] == 'vlan':
                     item.setIcon(QtGui.QIcon('network-workgroup.png'))
+                elif d['type'] == 'route':
+                    item.setIcon(QtGui.QIcon('arrow-right.png'))
                 item.setText(d['name'])
                 item.setData(new_data)
                 self._add_item(item, current_model, next_models)
@@ -825,6 +827,7 @@ class MainForm(QtGui.QMainWindow):
                           'network': 'None',
                           'mtu': -1,
                           'bond_type': 'ovs',
+                          'routes': [],
                           })
             self._add_item(item, current_model, self._nested_models)
         else:

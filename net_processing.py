@@ -426,7 +426,6 @@ def _process_bond_members(nd):
 def _validate_config(data, global_data):
     _check_duplicate_vlans(data, global_data)
     _check_duplicate_networks(data)
-    _check_invalid_vlan_devices(data)
     # TODO(bnemec): Check for conflicting cidrs
     #               Duplicate nics
     #               Duplicate bonds
@@ -473,22 +472,6 @@ def _check_duplicate_networks(data):
                     raise RuntimeError(err_msg % (j['network'], filename))
                 seen.add(j['network'])
             seen.add(i['network'])
-
-def _check_invalid_vlan_devices(data):
-    err_msg = 'VLAN device not found: %s'
-    for filename, d in data.items():
-        bonds = set()
-        for i in d:
-            if i['type'] == 'ovs_bridge':
-                for j in i['members']:
-                    if j['type'] == 'ovs_bond':
-                        bonds.add(j['name'])
-        for i in d:
-            if i['type'] == 'ovs_bridge':
-                for j in i['members']:
-                    if (j['type'] == 'vlan' and j['device'] and
-                            j['device'] not in bonds):
-                        raise RuntimeError(err_msg % j['device'])
 
 def _load(base_path):
     file_data = pickle.load(open(os.path.join(base_path,
