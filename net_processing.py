@@ -146,10 +146,6 @@ def _write_nic_configs(data, base_path):
     """Write nic configs based on the data passed in"""
     nic_path = os.path.join(base_path, 'nic-configs')
     try:
-        os.mkdir(base_path)
-    except OSError:
-        pass
-    try:
         os.mkdir(nic_path)
     except OSError:
         pass
@@ -184,6 +180,10 @@ def _write_nic_configs(data, base_path):
             f.write(OUTPUTS)
 
 def _write_pickle(data, global_data, base_path):
+    try:
+        os.mkdir(base_path)
+    except OSError:
+        pass
     file_data = {'data': data, 'global_data': global_data}
     pickle.dump(file_data, open(os.path.join(base_path,
                                              'ui-settings.pickle'), 'wb'))

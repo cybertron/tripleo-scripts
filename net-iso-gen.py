@@ -446,8 +446,12 @@ class MainForm(QtGui.QMainWindow):
         general_layout.addWidget(PairWidget('OVS Bond Options', self.bond_options))
 
         generate_layout = QtGui.QHBoxLayout()
-        self.base_path = QtGui.QLineEdit('/tmp/templates')
-        generate_layout.addWidget(self.base_path, 5)
+        self.base_path = QtGui.QLineEdit('templates')
+        self.base_path.setToolTip('network-[environment|isolation].yaml will '
+                                  'be written to this path, and nic config '
+                                  'files will be written to a nic-configs '
+                                  'subdirectory at this location.')
+        generate_layout.addWidget(PairWidget('Output Path', self.base_path), 5)
 
         set_path = QtGui.QPushButton('Set Output Path')
         set_path.clicked.connect(self._set_output_path)
