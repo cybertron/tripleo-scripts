@@ -134,7 +134,8 @@ class MainForm(QtGui.QMainWindow):
 
         self.node_type = NetworkListWidget()
         def new_item(name):
-            item = QtGui.QListWidgetItem(QtGui.QIcon('network-server.png'), name)
+            item = QtGui.QListWidgetItem(
+                QtGui.QIcon(os.path.join('icons', 'network-server.png')), name)
             self.node_type.addItem(item)
             self._node_models[item] = QtGui.QStandardItemModel(0, 1)
         new_item('Controller')
@@ -506,15 +507,20 @@ class MainForm(QtGui.QMainWindow):
                 new_data.pop('members', None)
                 item = QtGui.QStandardItem()
                 if d['type'] == 'interface':
-                    item.setIcon(QtGui.QIcon('network-wired.png'))
+                    item.setIcon(QtGui.QIcon(
+                        os.path.join('icons', 'network-wired.png')))
                 elif d['type'] == 'ovs_bridge':
-                    item.setIcon(QtGui.QIcon('bridge.png'))
+                    item.setIcon(QtGui.QIcon(
+                        os.path.join('icons', 'bridge.png')))
                 elif d['type'] == 'ovs_bond':
-                    item.setIcon(QtGui.QIcon('repository.png'))
+                    item.setIcon(QtGui.QIcon(
+                        os.path.join('icons', 'repository.png')))
                 elif d['type'] == 'vlan':
-                    item.setIcon(QtGui.QIcon('network-workgroup.png'))
+                    item.setIcon(QtGui.QIcon(
+                        os.path.join('icons', 'network-workgroup.png')))
                 elif d['type'] == 'route':
-                    item.setIcon(QtGui.QIcon('arrow-right.png'))
+                    item.setIcon(QtGui.QIcon(
+                        os.path.join('icons', 'arrow-right.png')))
                 item.setText(d['name'])
                 item.setData(new_data)
                 self._add_item(item, current_model, next_models)
@@ -714,8 +720,9 @@ class MainForm(QtGui.QMainWindow):
         return nic_name
 
     def _new_nic_item(self, nic_name, network='ControlPlane'):
-        item = QtGui.QStandardItem(QtGui.QIcon('network-wired.png'),
-                                   nic_name)
+        item = QtGui.QStandardItem(
+            QtGui.QIcon(os.path.join('icons', 'network-wired.png')),
+            nic_name)
         item.setData({'type': 'interface',
                       'name': nic_name,
                       'use_dhcp': False,
@@ -766,7 +773,8 @@ class MainForm(QtGui.QMainWindow):
             current_item = self.node_type.currentItem()
             current_model = self._node_models[current_item]
             bridge_name = 'br-ex'
-            item = QtGui.QStandardItem(QtGui.QIcon('bridge.png'), bridge_name)
+            item = QtGui.QStandardItem(
+                QtGui.QIcon(os.path.join('icons', 'bridge.png')), bridge_name)
             item.setData({'type': 'ovs_bridge',
                           'name': bridge_name,
                           'use_dhcp': False,
@@ -783,8 +791,9 @@ class MainForm(QtGui.QMainWindow):
 
     def _add_vlan(self):
         def new_item():
-            item = QtGui.QStandardItem(QtGui.QIcon('network-workgroup.png'),
-                                       'VLAN')
+            item = QtGui.QStandardItem(
+                QtGui.QIcon(os.path.join('icons', 'network-workgroup.png')),
+                'VLAN')
             item.setData({'type': 'vlan',
                           'vlan_id': '',
                           'addresses': [],
@@ -811,8 +820,9 @@ class MainForm(QtGui.QMainWindow):
                 self._error(err_msg)
             current_model = self._interface_models[current_item]
             bond_name = 'bond1'
-            item = QtGui.QStandardItem(QtGui.QIcon('repository.png'),
-                                       bond_name)
+            item = QtGui.QStandardItem(
+                QtGui.QIcon(os.path.join('icons', 'repository.png')),
+                bond_name)
             # The ovs_bond type is a historical artifact from when these only
             # supported OVS bonds.  Since it turns out that linux_bonds are
             # very similar, the same object is used, but the type is left
@@ -835,8 +845,9 @@ class MainForm(QtGui.QMainWindow):
 
     def _add_route(self):
         def new_item():
-            item = QtGui.QStandardItem(QtGui.QIcon('arrow-right.png'),
-                                       'Route')
+            item = QtGui.QStandardItem(
+                QtGui.QIcon(os.path.join('icons', 'arrow-right.png')),
+                'Route')
             item.setData({'type': 'route',
                           'ip_netmask': '0.0.0.0/0',
                           'next_hop': '0.0.0.0',
