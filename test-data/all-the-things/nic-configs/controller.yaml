@@ -148,6 +148,10 @@ resources:
               type: vlan
               vlan_id: {get_param: ManagementNetworkVlanID}
             name: br-ex
+            routes:
+            - default: false
+              ip_netmask: 2.2.0.0/16
+              next_hop: 2.2.0.1
             type: ovs_bridge
             use_dhcp: false
       group: os-apply-config

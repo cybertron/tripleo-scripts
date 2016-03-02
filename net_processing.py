@@ -175,7 +175,7 @@ def _write_nic_configs(data, base_path):
                         _process_bond_members(k)
                 network_config.append(i)
             resource_string = yaml.safe_dump(resources,
-                                                default_flow_style=False)
+                                             default_flow_style=False)
             # Ugly hack to remove unwanted quoting around get_params
             resource_string = resource_string.replace(
                 "'{get_param:", "{get_param:")
@@ -346,7 +346,6 @@ def _process_network_config(d, filename):
                         '{get_param: ExternalInterfaceDefaultRoute}'})
         elif network == 'None':
             d.pop('addresses', None)
-            d.pop('routes', None)
         else:
             d['addresses'] = [{'ip_netmask':
                                    '{get_param: %sIpSubnet}' % network}]
