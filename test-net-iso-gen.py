@@ -59,6 +59,19 @@ class TestOutput(unittest.TestCase):
     def test_all_the_things(self):
         self._test('test-data/all-the-things')
 
+class TestValidations(unittest.TestCase):
+    def test_vlans_valid(self):
+        with open('test-data/all-the-things/nic-input.json') as f:
+            data = json.loads(f.read())
+        with open('test-data/all-the-things/global-input.json') as f:
+            global_data = json.loads(f.read())
+        net_processing._check_duplicate_vlans(data, global_data)
+
+    def test_networks_valid(self):
+        with open('test-data/all-the-things/nic-input.json') as f:
+            data = json.loads(f.read())
+        net_processing._check_duplicate_networks(data)
+
 
 if __name__ == '__main__':
     unittest.main()
