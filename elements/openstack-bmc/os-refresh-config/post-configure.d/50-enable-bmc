@@ -1,7 +1,0 @@
-#!/bin/bash
-
-set -eux
-set -o pipefail
-
-os-svc-enable -n openstack-bmc
-os-svc-restart -n openstack-bmc

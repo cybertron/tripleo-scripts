@@ -1,7 +1,0 @@
-os-apply-config
-os-collect-config
-os-refresh-config
-os-svc-install
-pip-and-virtualenv
-selinux
-stackuser
