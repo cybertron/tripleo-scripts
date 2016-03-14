@@ -432,10 +432,10 @@ def _process_bond_members(nd):
 def _validate_config(data, global_data):
     _check_duplicate_vlans(data, global_data)
     _check_duplicate_networks(data)
+    _check_duplicate_bonds(data)
     _check_ips_in_cidr(data, global_data)
     # TODO(bnemec): Check for conflicting cidrs
     #               Duplicate nics
-    #               Duplicate bonds
 
 def _lower_to_camel(lower):
     """Given a lower-case network name, return the camel-cased form
@@ -478,6 +478,21 @@ def _check_duplicate_networks(data):
                     raise RuntimeError(err_msg % (j['network'], filename))
                 seen.add(j['network'])
             seen.add(i['network'])
+
+def _check_duplicate_bonds(data):
+    for filename, d in data.items():
+        seen = set()
+        for i in d:
+            if i['type'] != 'ovs_bridge':
+                continue
+            for j in i['members']:
+                if j['type'] != 'ovs_bond':
+                    continue
+                if j['name'] in seen:
+                    raise RuntimeError('Duplicate bond name "%s" found in '
+                                       '"%s"' %
+                                       (j['name'], filename))
+                seen.add(j['name'])
 
 def _validate_addr_in_cidr(ip, cidr, name):
         if netaddr.IPAddress(ip) not in netaddr.IPNetwork(cidr):
