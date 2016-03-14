@@ -17,6 +17,8 @@ import os
 import pickle
 import yaml
 
+import netaddr
+
 PARAMS = """heat_template_version: 2015-04-30
 
 parameters:
@@ -269,7 +271,12 @@ def _write_net_iso_entry(f, net, data, basename=None):
                   '../network/ports/%s.yaml')
 
 def _net_used_all(data, name):
-    """Check whether a network is used in any nic-config file"""
+    """Check whether a network is used in any nic-config file
+
+    :returns: A tuple where the first element is whether the network is used
+              at all, and the second element is whether the network is used on
+              a VLAN.
+    """
     return (any([_net_used(data, name, fname)[0]
                  for fname, _ in data.items()]),
             any([_net_used(data, name, fname)[1]
@@ -425,10 +432,10 @@ def _process_bond_members(nd):
 def _validate_config(data, global_data):
     _check_duplicate_vlans(data, global_data)
     _check_duplicate_networks(data)
+    _check_ips_in_cidr(data, global_data)
     # TODO(bnemec): Check for conflicting cidrs
     #               Duplicate nics
     #               Duplicate bonds
-    #               Warn if vlan device is not set when using bonds?
 
 def _lower_to_camel(lower):
     """Given a lower-case network name, return the camel-cased form
@@ -471,6 +478,25 @@ def _check_duplicate_networks(data):
                     raise RuntimeError(err_msg % (j['network'], filename))
                 seen.add(j['network'])
             seen.add(i['network'])
+
+def _validate_addr_in_cidr(ip, cidr, name):
+        if netaddr.IPAddress(ip) not in netaddr.IPNetwork(cidr):
+            raise RuntimeError('%s "%s" not in CIDR "%s"' % (name, ip, cidr))
+
+def _check_ips_in_cidr(data, global_data):
+    for name, d in global_data.items():
+        try:
+            cidr = d['cidr']
+        except (KeyError, TypeError):
+            continue
+        camel = _lower_to_camel(name)
+        if _net_used_all(data, camel)[0]:
+            _validate_addr_in_cidr(d['start'], cidr, '%s start' % camel)
+            _validate_addr_in_cidr(d['end'], cidr, '%s end' % camel)
+            if 'gateway' in d:
+                _validate_addr_in_cidr(d['gateway'], cidr,
+                                       '%s gateway' % camel)
+
 
 def _load(base_path):
     file_data = pickle.load(open(os.path.join(base_path,
