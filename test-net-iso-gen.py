@@ -124,5 +124,15 @@ class TestValidations(unittest.TestCase):
                           net_processing._check_ips_in_cidr,
                           data, global_data)
 
+    def test_duplicate_nics_valid(self):
+        data, _ = self._load_data('all-the-things')
+        net_processing._check_duplicate_nics(data)
+
+    def test_duplicate_nics_bond(self):
+        data, _ = self._load_data('duplicate-nics')
+        self.assertRaises(RuntimeError,
+                          net_processing._check_duplicate_nics,
+                          data)
+
 if __name__ == '__main__':
     unittest.main()

@@ -434,9 +434,9 @@ def _validate_config(data, global_data):
     _check_duplicate_vlans(data, global_data)
     _check_duplicate_networks(data)
     _check_duplicate_bonds(data)
+    _check_duplicate_nics(data)
     _check_overlapping_cidrs(data, global_data)
     _check_ips_in_cidr(data, global_data)
-    # TODO(bnemec): Check for duplicate nics
 
 def _lower_to_camel(lower):
     """Given a lower-case network name, return the camel-cased form
@@ -494,6 +494,20 @@ def _check_duplicate_bonds(data):
                                        '"%s"' %
                                        (j['name'], filename))
                 seen.add(j['name'])
+
+def _check_duplicate_nics(data):
+    for filename, d in data.items():
+        seen = set()
+        def process_interfaces(d):
+            for i in d:
+                if i['type'] == 'interface':
+                    name = i['name']
+                    if name in seen:
+                        raise RuntimeError('Duplicate nic name: "%s"' % name)
+                    seen.add(name)
+                if 'members' in i:
+                    process_interfaces(i['members'])
+        process_interfaces(d)
 
 def _check_overlapping_cidrs(data, global_data):
     cidrs = []
