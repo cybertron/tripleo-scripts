@@ -13,6 +13,7 @@
 # under the License.
 
 import copy
+import itertools
 import os
 import pickle
 import yaml
@@ -433,9 +434,9 @@ def _validate_config(data, global_data):
     _check_duplicate_vlans(data, global_data)
     _check_duplicate_networks(data)
     _check_duplicate_bonds(data)
+    _check_overlapping_cidrs(data, global_data)
     _check_ips_in_cidr(data, global_data)
-    # TODO(bnemec): Check for conflicting cidrs
-    #               Duplicate nics
+    # TODO(bnemec): Check for duplicate nics
 
 def _lower_to_camel(lower):
     """Given a lower-case network name, return the camel-cased form
@@ -493,6 +494,28 @@ def _check_duplicate_bonds(data):
                                        '"%s"' %
                                        (j['name'], filename))
                 seen.add(j['name'])
+
+def _check_overlapping_cidrs(data, global_data):
+    cidrs = []
+    for name, d in global_data.items():
+        try:
+            cidr = d['cidr']
+        except (KeyError, TypeError):
+            continue
+        camel = _lower_to_camel(name)
+        if _net_used_all(data, camel)[0]:
+            new_cidr = netaddr.IPNetwork(cidr)
+            if new_cidr in cidrs:
+                raise RuntimeError('Duplicate CIDR found: "%s"' % new_cidr)
+            cidrs.append(new_cidr)
+    for x, y in itertools.product(cidrs, cidrs):
+        if x == y:
+            # We checked for duplicate CIDRs above, and don't want to check a
+            # CIDR against itself.
+            continue
+        if x in y or y in x:
+            raise RuntimeError('Overlapping CIDRs detected: "%s" and "%s"' %
+                               (x, y))
 
 def _validate_addr_in_cidr(ip, cidr, name):
         if netaddr.IPAddress(ip) not in netaddr.IPNetwork(cidr):
