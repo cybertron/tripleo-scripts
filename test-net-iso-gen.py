@@ -60,33 +60,69 @@ class TestOutput(unittest.TestCase):
         self._test('test-data/all-the-things')
 
 class TestValidations(unittest.TestCase):
-    def test_vlans_valid(self):
-        with open('test-data/all-the-things/nic-input.json') as f:
+    def _load_data(self, name):
+        with open('test-data/%s/nic-input.json' % name) as f:
             data = json.loads(f.read())
-        with open('test-data/all-the-things/global-input.json') as f:
+        with open('test-data/%s/global-input.json' % name) as f:
             global_data = json.loads(f.read())
+        return data, global_data
+
+    def test_vlans_valid(self):
+        data, global_data = self._load_data('all-the-things')
         net_processing._check_duplicate_vlans(data, global_data)
 
     def test_vlans_invalid(self):
-        with open('test-data/duplicate-vlans/nic-input.json') as f:
-            data = json.loads(f.read())
-        with open('test-data/duplicate-vlans/global-input.json') as f:
-            global_data = json.loads(f.read())
+        data, global_data = self._load_data('duplicate-vlans')
         self.assertRaises(RuntimeError, net_processing._check_duplicate_vlans,
                           data, global_data)
 
     def test_networks_valid(self):
-        with open('test-data/all-the-things/nic-input.json') as f:
-            data = json.loads(f.read())
+        data, _ = self._load_data('all-the-things')
         net_processing._check_duplicate_networks(data)
 
     def test_networks_invalid(self):
-        with open('test-data/duplicate-networks/nic-input.json') as f:
-            data = json.loads(f.read())
+        data, _ = self._load_data('duplicate-networks')
         self.assertRaises(RuntimeError,
                           net_processing._check_duplicate_networks,
                           data)
 
+    def test_cidrs_valid(self):
+        data, global_data = self._load_data('all-the-things')
+        net_processing._check_overlapping_cidrs(data, global_data)
+
+    def test_cidrs_duplicate(self):
+        data, global_data = self._load_data('duplicate-cidrs')
+        self.assertRaises(RuntimeError,
+                          net_processing._check_overlapping_cidrs,
+                          data, global_data)
+
+    def test_cidrs_overlapping(self):
+        data, global_data = self._load_data('overlapping-cidrs')
+        self.assertRaises(RuntimeError,
+                          net_processing._check_overlapping_cidrs,
+                          data, global_data)
+
+    def test_ips_in_cidr_valid(self):
+        data, global_data = self._load_data('all-the-things')
+        net_processing._check_ips_in_cidr(data, global_data)
+
+    def test_start_not_in_cidr(self):
+        data, global_data = self._load_data('start-not-in-cidr')
+        self.assertRaises(RuntimeError,
+                          net_processing._check_ips_in_cidr,
+                          data, global_data)
+
+    def test_end_not_in_cidr(self):
+        data, global_data = self._load_data('end-not-in-cidr')
+        self.assertRaises(RuntimeError,
+                          net_processing._check_ips_in_cidr,
+                          data, global_data)
+
+    def test_gateway_not_in_cidr(self):
+        data, global_data = self._load_data('gateway-not-in-cidr')
+        self.assertRaises(RuntimeError,
+                          net_processing._check_ips_in_cidr,
+                          data, global_data)
 
 if __name__ == '__main__':
     unittest.main()
