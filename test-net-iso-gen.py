@@ -67,6 +67,10 @@ class TestValidations(unittest.TestCase):
             global_data = json.loads(f.read())
         return data, global_data
 
+    def test_validate_config(self):
+        data, global_data = self._load_data('all-the-things')
+        net_processing._validate_config(data, global_data)
+
     def test_vlans_valid(self):
         data, global_data = self._load_data('all-the-things')
         net_processing._check_duplicate_vlans(data, global_data)
