@@ -138,5 +138,17 @@ class TestValidations(unittest.TestCase):
                           net_processing._check_duplicate_nics,
                           data)
 
+    def test_multiple_primaries(self):
+        data, _ = self._load_data('duplicate-primary')
+        self.assertRaises(RuntimeError,
+                          net_processing._check_primary_interfaces,
+                          data)
+
+    def test_no_primary(self):
+        data, _ = self._load_data('no-primary')
+        self.assertRaises(RuntimeError,
+                          net_processing._check_primary_interfaces,
+                          data)
+
 if __name__ == '__main__':
     unittest.main()

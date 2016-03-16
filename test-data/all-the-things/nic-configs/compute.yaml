@@ -91,7 +91,7 @@ resources:
                 primary: true
                 type: interface
               - name: eth1
-                primary: true
+                primary: false
                 type: interface
               name: bond1
               type: linux_bond

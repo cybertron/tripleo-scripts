@@ -105,7 +105,7 @@ resources:
                 primary: true
                 type: interface
               - name: nic3
-                primary: true
+                primary: false
                 type: interface
               name: bond1
               ovs_options: {get_param: BondInterfaceOvsOptions}

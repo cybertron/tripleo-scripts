@@ -437,6 +437,8 @@ def _validate_config(data, global_data):
     _check_duplicate_nics(data)
     _check_overlapping_cidrs(data, global_data)
     _check_ips_in_cidr(data, global_data)
+    _check_primary_interfaces(data)
+    # TODO: Check for only one bond/interface per bridge
 
 def _lower_to_camel(lower):
     """Given a lower-case network name, return the camel-cased form
@@ -548,6 +550,28 @@ def _check_ips_in_cidr(data, global_data):
             if 'gateway' in d:
                 _validate_addr_in_cidr(d['gateway'], cidr,
                                        '%s gateway' % camel)
+
+def _check_primary_interfaces(data):
+    """Validate that there is exactly one primary interface on a bond"""
+    multi_err = 'Found multiple primary interfaces on bond "%s"'
+    missing_err = 'Found no primary interface on bond "%s"'
+    def process_bond(m):
+        have_primary = False
+        for i in m['members']:
+            if i['type'] == 'interface':
+                if i['primary']:
+                    if have_primary:
+                        raise RuntimeError(multi_err % m['name'])
+                    have_primary = True
+        if not have_primary:
+            raise RuntimeError(missing_err % m['name'])
+
+    for filename, d in data.items():
+        for item in d:
+            if item['type'] == 'ovs_bridge':
+                for m in item['members']:
+                    if m['type'] == 'ovs_bond':
+                        process_bond(m)
 
 
 def _load(base_path):
