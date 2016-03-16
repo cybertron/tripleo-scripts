@@ -243,11 +243,14 @@ def _write_net_iso(data, base_path):
         def write(content):
             f.write('  ' + content + '\n')
         f.write('resource_registry:\n')
-        # When should these be included?
-        #write('OS::TripleO::Network::Ports::RedisVipPort: '
-                #'../network/ports/vip.yaml')
-        #write('OS::TripleO::Controller::Ports::RedisVipPort: '
-                #'../network/ports/vip.yaml')
+        # By default, we run redis on the internal network with net-iso.
+        # Without internal enabled, this doesn't seem to work.
+        if _net_used_all(data, 'InternalApi')[0]:
+            write('# Redis')
+            write('OS::TripleO::Network::Ports::RedisVipPort: '
+                  '../network/ports/vip.yaml')
+            write('OS::TripleO::Controller::Ports::RedisVipPort: '
+                  '../network/ports/vip.yaml')
         for i in ALL_NETS[1:]:
             _write_net_iso_entry(f, i[0], data, i[1])
 
