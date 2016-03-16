@@ -150,5 +150,17 @@ class TestValidations(unittest.TestCase):
                           net_processing._check_primary_interfaces,
                           data)
 
+    def test_bridge_multi(self):
+        data, _ = self._load_data('bridge-multi')
+        self.assertRaises(RuntimeError,
+                          net_processing._check_bridge_members,
+                          data)
+
+    def test_bridge_none(self):
+        data, _ = self._load_data('bridge-none')
+        self.assertRaises(RuntimeError,
+                          net_processing._check_bridge_members,
+                          data)
+
 if __name__ == '__main__':
     unittest.main()
