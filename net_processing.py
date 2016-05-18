@@ -386,8 +386,6 @@ def _process_bridge_members(nd, siblings):
         bond = _find_bond(siblings)
         if bond is not None:
             nd['device'] = bond['name']
-        if not nd['device']:
-            nd.pop('device', None)
         if network == 'External':
             # This shares some logic with _process_network_config. Refactor?
             nd['addresses'] = [{'ip_netmask':

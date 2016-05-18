@@ -6,6 +6,7 @@ resource_registry:
   OS::TripleO::Network::External: ../network/external.yaml
   OS::TripleO::Network::Ports::ExternalVipPort: ../network/ports/external.yaml
   OS::TripleO::Controller::Ports::ExternalPort: ../network/ports/external.yaml
+  OS::TripleO::BlockStorage::Ports::ExternalPort: ../network/ports/external.yaml
   # InternalApi
   OS::TripleO::Network::InternalApi: ../network/internal_api.yaml
   OS::TripleO::Network::Ports::InternalApiVipPort: ../network/ports/internal_api.yaml
