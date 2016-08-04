@@ -329,7 +329,8 @@ def _process_network_config(d, filename):
     if d['type'] == 'interface' or d['type'] == 'ovs_bridge':
         network = d['network']
         del d['network']
-        # This is nonsense unless we're in a bridge
+        # This is nonsense unless we're in a bridge, which we can't be at
+        # this level of nesting.
         d.pop('primary', None)
         if d['type'] == 'interface':
             d.pop('members', None)

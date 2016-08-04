@@ -443,7 +443,7 @@ class MainForm(QtGui.QMainWindow):
                                                             self.dns2]))
 
         self.bond_options = QtGui.QLineEdit()
-        general_layout.addWidget(PairWidget('OVS Bond Options', self.bond_options))
+        general_layout.addWidget(PairWidget('Bond Options', self.bond_options))
 
         generate_layout = QtGui.QHBoxLayout()
         self.base_path = QtGui.QLineEdit('templates')
