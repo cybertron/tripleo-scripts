@@ -45,7 +45,7 @@ class TestOutput(unittest.TestCase):
                                    'network-isolation.yaml')) as expected:
                 self.assertEqual(expected.read(), actual.read())
 
-        net_processing._write_nic_configs(data, self.output_path)
+        net_processing._write_nic_configs(data, global_data, self.output_path)
         opath = os.path.join(self.output_path, 'nic-configs')
         for f in os.listdir(opath):
             with open(os.path.join(opath, f)) as actual:

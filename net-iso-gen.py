@@ -445,6 +445,13 @@ class MainForm(QtGui.QMainWindow):
         self.bond_options = QtGui.QLineEdit()
         general_layout.addWidget(PairWidget('Bond Options', self.bond_options))
 
+        self.auto_routes = QtGui.QCheckBox()
+        self.auto_routes.setChecked(True)
+        self.auto_routes.setToolTip('Include standard default routes automatically. '
+                                    'When unchecked, default routes will need to be '
+                                    'configured manually for each node type.')
+        general_layout.addWidget(PairWidget('Automatic Default Routes', self.auto_routes))
+
         generate_layout = QtGui.QHBoxLayout()
         self.base_path = QtGui.QLineEdit('templates')
         self.base_path.setToolTip('network-[environment|isolation].yaml will '
@@ -574,6 +581,7 @@ class MainForm(QtGui.QMainWindow):
         retval['dns1'] = self.dns1.text()
         retval['dns2'] = self.dns2.text()
         retval['bond_options'] = self.bond_options.text()
+        retval['auto_routes'] = self.auto_routes.isChecked()
         return retval
 
     def _dict_to_global(self, data):
@@ -603,6 +611,7 @@ class MainForm(QtGui.QMainWindow):
         self.dns1.setText(data.get('dns1', ''))
         self.dns2.setText(data.get('dns2', ''))
         self.bond_options.setText(data.get('bond_options', ''))
+        self.auto_routes.setChecked(data.get('auto_routes', True))
 
     def _error(self, message):
         QtGui.QMessageBox.critical(self, 'Error', message)
@@ -616,7 +625,7 @@ class MainForm(QtGui.QMainWindow):
         try:
             net_processing._validate_config(data, global_data)
             net_processing._write_pickle(data, global_data, base_path)
-            net_processing._write_nic_configs(data, base_path)
+            net_processing._write_nic_configs(data, global_data, base_path)
             # We need a fresh, unmolested copy of the dict for the following steps
             data = self._ui_to_dict()
             net_processing._write_net_env(data, global_data, base_path)

@@ -145,7 +145,7 @@ ALL_NETS = [('ControlPlane', 'control'),
 SIMILAR_NETS = ALL_NETS[2:]
 
 
-def _write_nic_configs(data, base_path):
+def _write_nic_configs(data, global_data, base_path):
     """Write nic configs based on the data passed in"""
     nic_path = os.path.join(base_path, 'nic-configs')
     try:
@@ -167,7 +167,8 @@ def _write_nic_configs(data, base_path):
             f.write(PARAMS)
             resources, network_config = new_resource()
             for i in node_data:
-                _process_network_config(i, filename)
+                _process_network_config(i, filename,
+                                        global_data.get('auto_routes', True))
                 for j in i.get('members', []):
                     _process_bridge_members(j, i.get('members', []))
                     for k in j.get('members', []):
@@ -318,7 +319,7 @@ def _process_all(d):
     if d['type'] == 'ovs_bridge' or d['type'] == 'ovs_bond':
         d['members'] = [m for m in d['members'] if m['type'] != 'route']
 
-def _process_network_config(d, filename):
+def _process_network_config(d, filename, auto_routes):
     """Tweak config data for top-level interfaces and bridges
 
     There is some data in the internal data structures of the UI that doesn't
@@ -346,16 +347,17 @@ def _process_network_config(d, filename):
             # HACK!  Typically non-controller nodes will need this, but
             # it's not a safe assumption.  It's also not necessarily true
             # that controller nodes don't need it.
-            if filename != 'controller.yaml':
+            if filename != 'controller.yaml' and auto_routes:
                 d['routes'].append({'default': True,
                                     'next_hop': '{get_param: ControlPlaneDefaultRoute}'})
         elif network == 'External':
             d['addresses'] = [{'ip_netmask':
                                     '{get_param: ExternalIpSubnet}'}]
-            d['routes'].append(
-                {'ip_netmask': '0.0.0.0/0',
-                    'next_hop':
-                        '{get_param: ExternalInterfaceDefaultRoute}'})
+            if auto_routes:
+                d['routes'].append(
+                    {'ip_netmask': '0.0.0.0/0',
+                        'next_hop':
+                            '{get_param: ExternalInterfaceDefaultRoute}'})
         elif network == 'None':
             d.pop('addresses', None)
         else:
