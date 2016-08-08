@@ -632,6 +632,8 @@ class MainForm(QtGui.QMainWindow):
             net_processing._write_net_iso(data, base_path)
         except RuntimeError as e:
             self._error(str(e))
+        QtGui.QMessageBox.information(self, 'Success!',
+                                      'Templates generated successfully')
         print 'Templates generated successfully'
 
     def _set_output_path(self):
