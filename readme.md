@@ -1,13 +1,7 @@
 Convenience scripts for tripleo
 ===============================
 
-This is just a collection of scripts I've put together that I use for tripleo development.
-
-undercloud_wizard.py
---------------------
-
-A PyQt GUI to help with generating undercloud.conf.  See details in the
-docstring at the top of the file.
+This is just a collection of scripts and tools I've put together that I use for tripleo development.
 
 net-iso-gen.py
 --------------
@@ -46,6 +40,14 @@ and a local copy of tripleo-heat-templates exists at ~/tht, an example usage wou
 
     cp ~/generated-templates/network-isolation.yaml ~/tht/environments/generated-network-isolation.yaml
     openstack overcloud deploy --templates ~/tht -e ~/tht/environments/generated-network-isolation.yaml -e ~/generated-templates/network-environment.yaml
+
+undercloud_wizard.py
+--------------------
+
+DEPRECATED: See http://ucw-bnemec.rhcloud.com instead.
+
+A PyQt GUI to help with generating undercloud.conf.  See details in the
+docstring at the top of the file.
 
 limit-fix
 ---------
