@@ -31,6 +31,11 @@ class TestOutput(unittest.TestCase):
             data = json.loads(f.read())
         with open(os.path.join(input_path, 'global-input.json')) as f:
             global_data = json.loads(f.read())
+        net_processing._write_pickle(data, global_data, self.output_path)
+        self.assertTrue(os.path.exists(os.path.join(self.output_path,
+                                                    'README')))
+        self.assertTrue(os.path.exists(os.path.join(self.output_path,
+                                                    'ui-settings.pickle')))
         net_processing._write_net_env(data, global_data, self.output_path)
         with open(os.path.join(self.output_path,
                                'network-environment.yaml')) as actual:
