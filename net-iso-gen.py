@@ -773,6 +773,11 @@ class MainForm(QtGui.QMainWindow):
             current_model = self._nested_models[current_item]
             nic_name = self._next_nic_name()
             item = self._new_nic_item(nic_name, 'None')
+            # Only default the first interface in a bond to primary
+            if current_model.rowCount():
+                d = item.data()
+                d['primary'] = False
+                item.setData(d)
             self._add_item(item, current_model)
         else:
             self._error(err_msg)
