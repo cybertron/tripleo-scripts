@@ -452,6 +452,10 @@ class MainForm(QtGui.QMainWindow):
                                     'configured manually for each node type.')
         general_layout.addWidget(PairWidget('Automatic Default Routes', self.auto_routes))
 
+        self.ipv6 = QtGui.QCheckBox()
+        self.ipv6.setToolTip('Configure networks to use IPv6 when possible.')
+        general_layout.addWidget(PairWidget('IPv6', self.ipv6))
+
         generate_layout = QtGui.QHBoxLayout()
         self.base_path = QtGui.QLineEdit('templates')
         self.base_path.setToolTip('network-[environment|isolation].yaml will '
@@ -582,6 +586,7 @@ class MainForm(QtGui.QMainWindow):
         retval['dns2'] = self.dns2.text()
         retval['bond_options'] = self.bond_options.text()
         retval['auto_routes'] = self.auto_routes.isChecked()
+        retval['ipv6'] = self.ipv6.isChecked()
         return retval
 
     def _dict_to_global(self, data):
@@ -612,6 +617,7 @@ class MainForm(QtGui.QMainWindow):
         self.dns2.setText(data.get('dns2', ''))
         self.bond_options.setText(data.get('bond_options', ''))
         self.auto_routes.setChecked(data.get('auto_routes', True))
+        self.ipv6.setChecked(data.get('ipv6', False))
 
     def _error(self, message):
         QtGui.QMessageBox.critical(self, 'Error', message)
@@ -629,7 +635,7 @@ class MainForm(QtGui.QMainWindow):
             # We need a fresh, unmolested copy of the dict for the following steps
             data = self._ui_to_dict()
             net_processing._write_net_env(data, global_data, base_path)
-            net_processing._write_net_iso(data, base_path)
+            net_processing._write_net_iso(data, global_data, base_path)
         except RuntimeError as e:
             self._error(str(e))
         QtGui.QMessageBox.information(self, 'Success!',
@@ -933,9 +939,10 @@ class MainForm(QtGui.QMainWindow):
             self.primary.setDisabled(True)
         self.item_name.setText(d['name'])
         if 'mtu' in d:
+            self.mtu.setEnabled(True)
             self.mtu.setValue(d['mtu'])
         else:
-            self.mtu.setValue(-1)
+            self.mtu.setEnabled(False)
         if 'ip_netmask' in d:
             self.route_netmask.setText(d['ip_netmask'])
             self.route_next_hop.setText(d['next_hop'])

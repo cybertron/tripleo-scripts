@@ -150,6 +150,14 @@ look like this:
 cp ~/generated-templates/network-isolation.yaml ~/tht/environments/generated-network-isolation.yaml
 openstack overcloud deploy --templates ~/tht -e ~/tht/environments/generated-network-isolation.yaml -e ~/generated-templates/network-environment.yaml
 """
+V6_NET_ISO_PARAMS="""parameter_defaults:
+  CephIPv6: True
+  CorosyncIPv6: True
+  MongoDbIPv6: True
+  NovaIPv6: True
+  RabbitIPv6: True
+  MemcachedIPv6: True
+"""
 TYPE_LIST = [(0, 'controller.yaml', 'Controller'),
              (1, 'compute.yaml', 'Compute'),
              (2, 'ceph-storage.yaml', 'CephStorage'),
@@ -207,6 +215,10 @@ def _write_nic_configs(data, global_data, base_path):
             f.write(OUTPUTS)
 
 def _write_pickle(data, global_data, base_path):
+    # Useful for generating the input json for a unit test
+    #import json
+    #print json.dumps(data)
+    #print json.dumps(global_data)
     try:
         os.mkdir(base_path)
     except OSError:
@@ -262,8 +274,9 @@ def _write_net_env(data, global_data, base_path):
         if global_data['bond_options']:
             write('BondInterfaceOvsOptions: %s' % global_data['bond_options'])
 
-def _write_net_iso(data, base_path):
+def _write_net_iso(data, global_data, base_path):
     """Write network-isolation.yaml based on the data passed in"""
+    ipv6 = global_data.get('ipv6', False)
     with open(os.path.join(base_path,
                            'network-isolation.yaml'), 'w') as f:
         def write(content):
@@ -272,18 +285,26 @@ def _write_net_iso(data, base_path):
         # By default, we run redis on the internal network with net-iso.
         # Without internal enabled, this doesn't seem to work.
         if _net_used_all(data, 'InternalApi')[0]:
+            vip_name = 'vip'
+            if ipv6:
+                vip_name = 'vip_v6'
             write('# Redis')
             write('OS::TripleO::Network::Ports::RedisVipPort: '
-                  '../network/ports/vip.yaml')
+                  '../network/ports/%s.yaml' % vip_name)
             write('OS::TripleO::Controller::Ports::RedisVipPort: '
-                  '../network/ports/vip.yaml')
+                  '../network/ports/%s.yaml' % vip_name)
         for i in ALL_NETS[1:]:
-            _write_net_iso_entry(f, i[0], data, i[1])
+            _write_net_iso_entry(f, i[0], data, i[1], ipv6=ipv6)
+        if ipv6:
+            f.write(V6_NET_ISO_PARAMS)
 
-def _write_net_iso_entry(f, net, data, basename=None):
+def _write_net_iso_entry(f, net, data, basename=None, ipv6=False):
     """Write the entries for a single network to network-isolation.yaml"""
     if basename is None:
         basename = net.lower()
+    # OVS and Neutron don't support ipv6 tenant networks yet.
+    if ipv6 and basename != 'tenant':
+        basename = basename + '_v6'
 
     def write(content):
         format_str = '  ' + content + '\n'

@@ -43,7 +43,7 @@ class TestOutput(unittest.TestCase):
                                    'network-environment.yaml')) as expected:
                 self.assertEqual(expected.read(), actual.read())
 
-        net_processing._write_net_iso(data, self.output_path)
+        net_processing._write_net_iso(data, global_data, self.output_path)
         with open(os.path.join(self.output_path,
                                'network-isolation.yaml')) as actual:
             with open(os.path.join(input_path,
@@ -63,6 +63,9 @@ class TestOutput(unittest.TestCase):
 
     def test_all_the_things(self):
         self._test('test-data/all-the-things')
+
+    def test_ipv6_multi(self):
+        self._test('test-data/ipv6-multi')
 
 class TestValidations(unittest.TestCase):
     def _load_data(self, name):
@@ -166,6 +169,23 @@ class TestValidations(unittest.TestCase):
         self.assertRaises(RuntimeError,
                           net_processing._check_bridge_members,
                           data)
+
+    def test_ipv6_multi(self):
+        data, global_data = self._load_data('ipv6-multi')
+        net_processing._validate_config(data, global_data)
+
+    def test_ipv6_cidrs_duplicate(self):
+        data, global_data = self._load_data('ipv6-duplicate-cidrs')
+        self.assertRaises(RuntimeError,
+                          net_processing._check_overlapping_cidrs,
+                          data, global_data)
+
+    def test_ipv6_start_not_in_cidr(self):
+        data, global_data = self._load_data('ipv6-start-not-in-cidr')
+        self.assertRaises(RuntimeError,
+                          net_processing._check_ips_in_cidr,
+                          data, global_data)
+
 
 if __name__ == '__main__':
     unittest.main()
