@@ -98,6 +98,21 @@ resources:
             name: br-ex
             type: ovs_bridge
             use_dhcp: false
+          - dns_servers: {get_param: DnsServers}
+            members:
+            - bonding_options: {get_param: BondInterfaceOvsOptions}
+              members:
+              - name: eno1
+                primary: true
+                type: interface
+              - name: eno2
+                primary: false
+                type: interface
+              name: team
+              type: team
+            name: br-team
+            type: ovs_bridge
+            use_dhcp: false
       group: os-apply-config
     type: OS::Heat::StructuredConfig
 

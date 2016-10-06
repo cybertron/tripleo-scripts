@@ -461,8 +461,12 @@ def _process_bridge_members(nd, siblings):
         nd.pop('use_dhcp', None)
         nd.pop('members', None)
     elif nd['type'] == 'ovs_bond':
-        if nd.get('bond_type', 'ovs') != 'ovs':
+        if nd.get('bond_type', 'ovs') == 'linux':
             nd['type'] = 'linux_bond'
+            nd['bonding_options'] = nd['ovs_options']
+            del nd['ovs_options']
+        elif nd.get('bond_type', 'ovs') == 'team':
+            nd['type'] = 'team'
             nd['bonding_options'] = nd['ovs_options']
             del nd['ovs_options']
         nd.pop('bond_type', None)

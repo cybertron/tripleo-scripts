@@ -234,6 +234,7 @@ class MainForm(QtGui.QMainWindow):
         self.bond_type = QtGui.QComboBox()
         self.bond_type.addItem('OVS')
         self.bond_type.addItem('Linux')
+        self.bond_type.addItem('Team')
         self.bond_type.currentIndexChanged.connect(self._bond_changed)
         bond_layout.addWidget(PairWidget('Bond Type', self.bond_type))
 
@@ -953,8 +954,10 @@ class MainForm(QtGui.QMainWindow):
         if d['type'] == 'ovs_bond':
             if d.get('bond_type', 'ovs') == 'ovs':
                 self.bond_type.setCurrentIndex(0)
-            else:
+            elif d.get('bond_type', 'ovs') == 'linux':
                 self.bond_type.setCurrentIndex(1)
+            elif d.get('bond_type', 'ovs') == 'team':
+                self.bond_type.setCurrentIndex(2)
 
     def _network_type_changed(self, _):
         new_name = self.network_type.currentText()
