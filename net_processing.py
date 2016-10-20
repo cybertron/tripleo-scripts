@@ -12,6 +12,7 @@
 # License for the specific language governing permissions and limitations
 # under the License.
 
+import collections
 import copy
 import itertools
 import os
@@ -174,6 +175,60 @@ ALL_NETS = [('ControlPlane', 'control'),
 # SIMILAR_NETS are the networks with uniform parameters.  ControlPlane and
 # External both have some unique ones that require special handling.
 SIMILAR_NETS = ALL_NETS[2:]
+# Used by _order_dict
+FIRST_KEYS=['type', 'name']
+# members should always be last so keys are not split over a large members list
+LAST_KEYS=['addresses', 'routes', 'members']
+
+# Borrowed from
+# http://stackoverflow.com/questions/9951852/pyyaml-dumping-things-backwards
+def ordered_representer(dumper, data):
+    return dumper.represent_mapping(u'tag:yaml.org,2002:map', data.items(),
+                                    flow_style=False)
+yaml.SafeDumper.add_representer(collections.OrderedDict, ordered_representer)
+
+
+def _order_dict(data):
+    """Order dict in a more human-readable way
+
+    The results will ordered as follows:
+    FIRST_KEYS
+    all keys not in FIRST_KEYS or LAST_KEYS in alphabetical order
+    LAST_KEYS
+
+    This must be the last thing done before the data is dumped as YAML.
+    Any further manipulation of the data after this is run on it may change
+    the ordering.
+
+    If data has a key named 'members' then _order_dicts will be called
+    recursively on its value.
+
+    :param data: The dict to be ordered.
+    """
+    new_dict = collections.OrderedDict()
+    filter_keys = FIRST_KEYS + LAST_KEYS
+    rest = {k: v for k, v in data.items() if k not in filter_keys}
+    for key in FIRST_KEYS:
+        if key in data:
+            new_dict[key] = data[key]
+    for key in sorted(rest.keys()):
+        new_dict[key] = rest[key]
+    for key in LAST_KEYS:
+        if key in data:
+            new_dict[key] = data[key]
+    if 'members' in new_dict:
+        _order_dicts(new_dict['members'])
+
+    return new_dict
+
+
+def _order_dicts(node_data):
+    """Convert dicts in node_data to a more human-readable format
+
+    :param node_data: A list of dicts to order
+    """
+    for index, item in enumerate(node_data):
+        node_data[index] = _order_dict(item)
 
 
 def _write_nic_configs(data, global_data, base_path):
@@ -205,6 +260,7 @@ def _write_nic_configs(data, global_data, base_path):
                     for k in j.get('members', []):
                         _process_bond_members(k)
                 network_config.append(i)
+            _order_dicts(network_config)
             resource_string = yaml.safe_dump(resources,
                                              default_flow_style=False)
             # Ugly hack to remove unwanted quoting around get_params

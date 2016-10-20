@@ -83,36 +83,36 @@ resources:
       config:
         os_net_config:
           network_config:
-          - dns_servers: {get_param: DnsServers}
-            members:
-            - bonding_options: {get_param: BondInterfaceOvsOptions}
-              members:
-              - name: eth0
-                primary: true
-                type: interface
-              - name: eth1
-                primary: false
-                type: interface
-              name: bond1
-              type: linux_bond
+          - type: ovs_bridge
             name: br-ex
-            type: ovs_bridge
+            dns_servers: {get_param: DnsServers}
             use_dhcp: false
-          - dns_servers: {get_param: DnsServers}
             members:
-            - bonding_options: {get_param: BondInterfaceOvsOptions}
+            - type: linux_bond
+              name: bond1
+              bonding_options: {get_param: BondInterfaceOvsOptions}
               members:
-              - name: eno1
+              - type: interface
+                name: eth0
                 primary: true
-                type: interface
-              - name: eno2
+              - type: interface
+                name: eth1
                 primary: false
-                type: interface
-              name: team
-              type: team
+          - type: ovs_bridge
             name: br-team
-            type: ovs_bridge
+            dns_servers: {get_param: DnsServers}
             use_dhcp: false
+            members:
+            - type: team
+              name: team
+              bonding_options: {get_param: BondInterfaceOvsOptions}
+              members:
+              - type: interface
+                name: eno1
+                primary: true
+              - type: interface
+                name: eno2
+                primary: false
       group: os-apply-config
     type: OS::Heat::StructuredConfig
 

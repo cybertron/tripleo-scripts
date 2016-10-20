@@ -83,14 +83,14 @@ resources:
       config:
         os_net_config:
           network_config:
-          - dns_servers: {get_param: DnsServers}
-            members:
-            - name: nic1
-              primary: true
-              type: interface
+          - type: ovs_bridge
             name: br-ex
-            type: ovs_bridge
+            dns_servers: {get_param: DnsServers}
             use_dhcp: false
+            members:
+            - type: interface
+              name: nic1
+              primary: true
       group: os-apply-config
     type: OS::Heat::StructuredConfig
 
