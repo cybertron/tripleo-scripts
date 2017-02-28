@@ -97,6 +97,8 @@ class MainForm(QtGui.QMainWindow):
         self._last_selected = None
 
         self._setup_ui()
+        if len(sys.argv) > 1:
+            self._load_templates(sys.argv[1])
         self._update_enabled_networks()
         self.show()
 
@@ -653,11 +655,14 @@ class MainForm(QtGui.QMainWindow):
         load_path = QtGui.QFileDialog.getExistingDirectory(self,
             'Select Previously Generated Directory', self.base_path.text())
         if load_path:
-            self.base_path.setText(load_path)
-            data, global_data = net_processing._load(load_path)
-            # Global first because that's where the version check happens
-            self._dict_to_global(global_data)
-            self._dict_to_ui(data)
+            self._load_templates(load_path)
+
+    def _load_templates(self, load_path):
+        self.base_path.setText(load_path)
+        data, global_data = net_processing._load(load_path)
+        # Global first because that's where the version check happens
+        self._dict_to_global(global_data)
+        self._dict_to_ui(data)
 
     def _node_type_changed(self, index):
         self.interfaces.setModel(
