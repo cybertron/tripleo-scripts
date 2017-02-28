@@ -143,13 +143,14 @@ tripleo-heat-templates, so by default the tool generates the paths assuming
 network-isolation.yaml will be copied into the environments/ directory of
 tripleo-heat-templates.
 
-If these templates are at ~/generated-templates and a local copy of
-tripleo-heat-templates (it is not recommended to make changes to the packaged
-tripleo-heat-templates tree) is at ~/tht, then an example deployment would
-look like this:
+If the standard tripleo-heat-templates are in use, then the
+network-isolation-absolute.yaml file can be used instead.  It has hard-coded
+references to the port files in /usr/share/openstack-tripleo-heat-templates.
 
-cp ~/generated-templates/network-isolation.yaml ~/tht/environments/generated-network-isolation.yaml
-openstack overcloud deploy --templates ~/tht -e ~/tht/environments/generated-network-isolation.yaml -e ~/generated-templates/network-environment.yaml
+If the generated network isolation templates are at ~/generated-templates, an
+example deployment command would look like:
+
+openstack overcloud deploy --templates -e ~/generated-templates/network-isolation-absolute.yaml -e ~/generated-templates/network-environment.yaml
 """
 V6_NET_ISO_PARAMS="""parameter_defaults:
   CephIPv6: True
@@ -330,32 +331,39 @@ def _write_net_env(data, global_data, base_path):
         if global_data['bond_options']:
             write('BondInterfaceOvsOptions: %s' % global_data['bond_options'])
 
-def _write_net_iso(data, global_data, base_path):
-    """Write network-isolation.yaml based on the data passed in"""
+def _write_net_iso(data, global_data, base_path,
+                   filename='network-isolation.yaml', template_path='..'):
+    """Write network-isolation.yaml based on the data passed in
+
+    :param data: nic-config data
+    :param global_data: common data across all networks and roles
+    :param base_path: output directory
+    :param filename: output filename
+    :param template_path: path to root of tripleo-heat-templates
+    """
     ipv6 = global_data.get('ipv6', False)
-    with open(os.path.join(base_path,
-                           'network-isolation.yaml'), 'w') as f:
-        def write(content):
-            f.write('  ' + content + '\n')
+    with open(os.path.join(base_path, filename), 'w') as f:
         f.write('resource_registry:\n')
         # By default, we run redis on the internal network with net-iso.
         # Without internal enabled, this doesn't seem to work.
+        def write(content):
+            f.write('  ' + content + '\n')
         if _net_used_all(data, 'InternalApi')[0]:
             vip_name = 'vip'
             if ipv6:
                 vip_name = 'vip_v6'
             write('# Redis')
-            write('OS::TripleO::Network::Ports::RedisVipPort: '
-                  '../network/ports/%s.yaml' % vip_name)
-            write('OS::TripleO::Controller::Ports::RedisVipPort: '
-                  '../network/ports/%s.yaml' % vip_name)
+            path = os.path.join(template_path, 'network/ports/%s.yaml' % vip_name)
+            write('OS::TripleO::Network::Ports::RedisVipPort: %s'% path)
+            write('OS::TripleO::Controller::Ports::RedisVipPort: %s' % path)
         for i in ALL_NETS[1:]:
-            _write_net_iso_entry(f, i[0], data, i[1], ipv6=ipv6)
+            _write_net_iso_entry(f, i[0], data, template_path, i[1], ipv6=ipv6)
         if ipv6:
             f.write(V6_NET_ISO_PARAMS)
 
-def _write_net_iso_entry(f, net, data, basename=None, ipv6=False):
-    """Write the entries for a single network to network-isolation.yaml"""
+def _write_net_iso_entry(f, net, data, template_path, basename=None,
+                         ipv6=False):
+    """Write the entries for a single network to f"""
     if basename is None:
         basename = net.lower()
     # OVS and Neutron don't support ipv6 tenant networks yet.
@@ -364,18 +372,18 @@ def _write_net_iso_entry(f, net, data, basename=None, ipv6=False):
 
     def write(content):
         format_str = '  ' + content + '\n'
-        f.write(format_str % (net, basename))
+        f.write(format_str % (net, template_path, basename))
 
     if _net_used_all(data, net)[0]:
         f.write('  # %s\n' % net)
         write('OS::TripleO::Network::%s: '
-              '../network/%s.yaml')
+              '%s/network/%s.yaml')
         write('OS::TripleO::Network::Ports::%sVipPort: '
-              '../network/ports/%s.yaml')
+              '%s/network/ports/%s.yaml')
     for _, filename, template_name in TYPE_LIST:
         if _net_used(data, net, filename)[0]:
             write('OS::TripleO::' + template_name + '::Ports::%sPort: '
-                  '../network/ports/%s.yaml')
+                  '%s/network/ports/%s.yaml')
 
 def _net_used_all(data, name):
     """Check whether a network is used in any nic-config file

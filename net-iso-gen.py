@@ -639,6 +639,9 @@ class MainForm(QtGui.QMainWindow):
             data = self._ui_to_dict()
             net_processing._write_net_env(data, global_data, base_path)
             net_processing._write_net_iso(data, global_data, base_path)
+            net_processing._write_net_iso(data, global_data, base_path,
+                filename='network-isolation-absolute.yaml',
+                template_path='/usr/share/openstack-tripleo-heat-templates')
         except RuntimeError as e:
             self._error(str(e))
         QtGui.QMessageBox.information(self, 'Success!',
