@@ -355,7 +355,6 @@ def _write_net_iso(data, global_data, base_path,
             write('# Redis')
             path = os.path.join(template_path, 'network/ports/%s.yaml' % vip_name)
             write('OS::TripleO::Network::Ports::RedisVipPort: %s'% path)
-            write('OS::TripleO::Controller::Ports::RedisVipPort: %s' % path)
         for i in ALL_NETS[1:]:
             _write_net_iso_entry(f, i[0], data, template_path, i[1], ipv6=ipv6)
         if ipv6:
