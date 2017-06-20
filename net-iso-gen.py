@@ -212,6 +212,16 @@ class MainForm(QtGui.QMainWindow):
         self.primary = QtGui.QCheckBox()
         self.primary.stateChanged.connect(self._primary_changed)
         interface_layout.addWidget(PairWidget('Primary', self.primary))
+        self.interface_type = QtGui.QComboBox()
+        self.interface_type.addItem('Interface')
+        self.interface_type.addItem('OVS DPDK Port')
+        self.interface_type.currentIndexChanged.connect(self._interface_type_changed)
+        interface_layout.addWidget(PairWidget('Interface Type', self.interface_type))
+        self.interface_port_name = QtGui.QLineEdit()
+        self.interface_port_name.textEdited.connect(self._port_name_changed)
+        self.interface_port_name_pair = PairWidget('DPDK Port Name',
+                                                   self.interface_port_name)
+        interface_layout.addWidget(self.interface_port_name_pair)
 
         self.route_group = QtGui.QGroupBox('Route Options')
         route_layout = QtGui.QVBoxLayout()
@@ -773,6 +783,7 @@ class MainForm(QtGui.QMainWindow):
                       'network': network,
                       'primary': True,
                       'mtu': -1,
+                      'port_name': '',
                       })
         return item
 
@@ -944,6 +955,11 @@ class MainForm(QtGui.QMainWindow):
             self.network_group.setVisible(True)
         if d['type'] == 'interface':
             self.interface_group.setVisible(True)
+            if d.get('interface_type', 'interface') == 'ovs_dpdk_port':
+                self.interface_port_name_pair.setVisible(True)
+                self.interface_port_name.setText(d['port_name'])
+            else:
+                self.interface_port_name_pair.setVisible(False)
         else:
             self.interface_group.setVisible(False)
         if d['type'] == 'ovs_bond':
@@ -989,6 +1005,11 @@ class MainForm(QtGui.QMainWindow):
                 self.bridge_type.setCurrentIndex(0)
             elif d.get('bridge_type', 'ovs') == 'ovs_user':
                 self.bridge_type.setCurrentIndex(1)
+        if d['type'] == 'interface':
+            if d.get('interface_type', 'interface') == 'interface':
+                self.interface_type.setCurrentIndex(0)
+            elif d.get('interface_type', 'interface') == 'ovs_dpdk_port':
+                self.interface_type.setCurrentIndex(1)
 
     def _network_type_changed(self, _):
         new_name = self.network_type.currentText()
@@ -1091,6 +1112,35 @@ class MainForm(QtGui.QMainWindow):
             current_item = get_current_item(self.interfaces)
         d = current_item.data()
         d['bridge_type'] = new_name.lower().replace(' ', '_')
+        current_item.setData(d)
+
+    def _interface_type_changed(self, _):
+        new_name = self.interface_type.currentText()
+        if self._last_selected is self.interfaces:
+            current_item = get_current_item(self.interfaces)
+        elif self._last_selected is self.nested_interfaces:
+            current_item = get_current_item(self.nested_interfaces)
+        elif self._last_selected is self.leaf_interfaces:
+            current_item = get_current_item(self.leaf_interfaces)
+        else:
+            self._error('Cannot set interface type on top-level nodes')
+        d = current_item.data()
+        d['interface_type'] = new_name.lower().replace(' ', '_')
+        if d['interface_type'] == 'ovs_dpdk_port':
+            # Ideally we'd make this default smarter, but this work for now
+            d['port_name'] = d.get('port_name', 'dpdk0')
+        current_item.setData(d)
+        self._update_input(current_item)
+
+    def _port_name_changed(self, text):
+        if self._last_selected is self.nested_interfaces:
+            current_item = get_current_item(self.nested_interfaces)
+        elif self._last_selected is self.leaf_interfaces:
+            current_item = get_current_item(self.leaf_interfaces)
+        else:
+            self._error('Cannot change port name of this item')
+        d = current_item.data()
+        d['port_name'] = text
         current_item.setData(d)
 
 if __name__ == '__main__':

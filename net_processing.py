@@ -444,6 +444,7 @@ def _process_network_config(d, filename, auto_routes):
         d.pop('primary', None)
         if d['type'] == 'interface':
             d.pop('members', None)
+            d.pop('port_name', None)
         # TODO: Format this less horribly
         if network == 'ControlPlane':
             d['addresses'] = [
@@ -486,6 +487,22 @@ def _find_bond(siblings):
         return bonds[0]
     except IndexError:
         return
+
+def _process_dpdk_interface(nd):
+    """Convert DPDK interface data
+
+    DPDK ports are treated as interfaces, but they actually need to be a
+    separate object which contains an interface.  This function handles
+    that conversion.
+    """
+    if nd['type'] != 'interface':
+        return
+    if nd.get('interface_type', 'interface') == 'ovs_dpdk_port':
+        nd['type'] = nd.pop('interface_type')
+        nd['members'] = [{'type': 'interface', 'name': nd['name']}]
+        nd['name'] = nd.pop('port_name')
+    else:
+        nd.pop('port_name', None)
 
 def _process_bridge_members(nd, siblings):
     """The same as _process_network_config, except for bridge members
@@ -542,16 +559,18 @@ def _process_bridge_members(nd, siblings):
         nd.pop('network', None)
         if len(nd['members']) < 2:
             raise RuntimeError('Bonds must contain at least two interfaces')
+    _process_dpdk_interface(nd)
     if 'routes' in nd and not nd['routes']:
         del nd['routes']
 
 def _process_bond_members(nd):
     _process_all(nd)
     if nd['type'] == 'interface':
-        nd.pop('addresses')
-        nd.pop('network')
-        nd.pop('use_dhcp')
-        nd.pop('routes')
+        nd.pop('addresses', None)
+        nd.pop('network', None)
+        nd.pop('use_dhcp', None)
+        nd.pop('routes', None)
+    _process_dpdk_interface(nd)
 
 def _validate_config(data, global_data):
     _check_duplicate_vlans(data, global_data)
