@@ -182,7 +182,7 @@ class MainForm(QtGui.QMainWindow):
         self.network_group = QtGui.QGroupBox('Network Options')
         network_layout = QtGui.QVBoxLayout()
         self.network_group.setLayout(network_layout)
-        self.network_group.setEnabled(False)
+        self.network_group.setVisible(False)
         input_layout.addWidget(self.network_group)
         self.network_type = QtGui.QComboBox()
         self.network_type.addItem('None')
@@ -207,7 +207,7 @@ class MainForm(QtGui.QMainWindow):
         self.interface_group = QtGui.QGroupBox('Interface Options')
         interface_layout = QtGui.QVBoxLayout()
         self.interface_group.setLayout(interface_layout)
-        self.interface_group.setEnabled(False)
+        self.interface_group.setVisible(False)
         input_layout.addWidget(self.interface_group)
         self.primary = QtGui.QCheckBox()
         self.primary.stateChanged.connect(self._primary_changed)
@@ -216,7 +216,7 @@ class MainForm(QtGui.QMainWindow):
         self.route_group = QtGui.QGroupBox('Route Options')
         route_layout = QtGui.QVBoxLayout()
         self.route_group.setLayout(route_layout)
-        self.route_group.setEnabled(False)
+        self.route_group.setVisible(False)
         input_layout.addWidget(self.route_group)
         self.route_netmask = QtGui.QLineEdit()
         self.route_netmask.textEdited.connect(self._route_changed)
@@ -231,7 +231,7 @@ class MainForm(QtGui.QMainWindow):
         self.bond_group = QtGui.QGroupBox('Bond Options')
         bond_layout = QtGui.QVBoxLayout()
         self.bond_group.setLayout(bond_layout)
-        self.bond_group.setEnabled(False)
+        self.bond_group.setVisible(False)
         input_layout.addWidget(self.bond_group)
         self.bond_type = QtGui.QComboBox()
         self.bond_type.addItem('OVS')
@@ -925,19 +925,19 @@ class MainForm(QtGui.QMainWindow):
         """
         d = item.data()
         if d['type'] == 'route':
-            self.route_group.setEnabled(True)
-            self.network_group.setEnabled(False)
+            self.route_group.setVisible(True)
+            self.network_group.setVisible(False)
         else:
-            self.route_group.setEnabled(False)
-            self.network_group.setEnabled(True)
+            self.route_group.setVisible(False)
+            self.network_group.setVisible(True)
         if d['type'] == 'interface':
-            self.interface_group.setEnabled(True)
+            self.interface_group.setVisible(True)
         else:
-            self.interface_group.setEnabled(False)
+            self.interface_group.setVisible(False)
         if d['type'] == 'ovs_bond':
-            self.bond_group.setEnabled(True)
+            self.bond_group.setVisible(True)
         else:
-            self.bond_group.setEnabled(False)
+            self.bond_group.setVisible(False)
 
         self.network_type.setCurrentIndex(
             self.network_type.findText(d.get('network', 'None')))
@@ -948,10 +948,10 @@ class MainForm(QtGui.QMainWindow):
             self.primary.setDisabled(True)
         self.item_name.setText(d['name'])
         if 'mtu' in d:
-            self.mtu.setEnabled(True)
+            self.mtu.setVisible(True)
             self.mtu.setValue(d['mtu'])
         else:
-            self.mtu.setEnabled(False)
+            self.mtu.setVisible(False)
         if 'ip_netmask' in d:
             self.route_netmask.setText(d['ip_netmask'])
             self.route_next_hop.setText(d['next_hop'])
