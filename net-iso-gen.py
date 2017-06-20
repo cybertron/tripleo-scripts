@@ -237,6 +237,7 @@ class MainForm(QtGui.QMainWindow):
         self.bond_type.addItem('OVS')
         self.bond_type.addItem('Linux')
         self.bond_type.addItem('Team')
+        self.bond_type.addItem('OVS DPDK')
         self.bond_type.currentIndexChanged.connect(self._bond_changed)
         bond_layout.addWidget(PairWidget('Bond Type', self.bond_type))
 
@@ -981,6 +982,8 @@ class MainForm(QtGui.QMainWindow):
                 self.bond_type.setCurrentIndex(1)
             elif d.get('bond_type', 'ovs') == 'team':
                 self.bond_type.setCurrentIndex(2)
+            elif d.get('bond_type', 'ovs') == 'ovs_dpdk':
+                self.bond_type.setCurrentIndex(3)
         if d['type'] == 'ovs_bridge':
             if d.get('bridge_type', 'ovs') == 'ovs':
                 self.bridge_type.setCurrentIndex(0)
@@ -1079,7 +1082,7 @@ class MainForm(QtGui.QMainWindow):
         if self._last_selected is self.nested_interfaces:
             current_item = get_current_item(self.nested_interfaces)
         d = current_item.data()
-        d['bond_type'] = new_name.lower()
+        d['bond_type'] = new_name.lower().replace(' ', '_')
         current_item.setData(d)
 
     def _bridge_changed(self, _):

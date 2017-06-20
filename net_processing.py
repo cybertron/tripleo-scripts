@@ -535,6 +535,9 @@ def _process_bridge_members(nd, siblings):
             nd['type'] = 'team'
             nd['bonding_options'] = nd['ovs_options']
             del nd['ovs_options']
+        elif nd.get('bond_type', 'ovs') == 'ovs_dpdk':
+            nd['type'] = 'ovs_dpdk_bond'
+            del nd['ovs_options']
         nd.pop('bond_type', None)
         nd.pop('network', None)
         if len(nd['members']) < 2:
