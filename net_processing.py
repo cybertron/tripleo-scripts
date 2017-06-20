@@ -472,6 +472,9 @@ def _process_network_config(d, filename, auto_routes):
         else:
             d['addresses'] = [{'ip_netmask':
                                    '{get_param: %sIpSubnet}' % network}]
+        if d['type'] == 'ovs_bridge':
+            br_type = d.pop('bridge_type', 'ovs')
+            d['type'] = '%s_bridge' % br_type
     if 'routes' in d and not d['routes']:
         del d['routes']
 

@@ -240,6 +240,17 @@ class MainForm(QtGui.QMainWindow):
         self.bond_type.currentIndexChanged.connect(self._bond_changed)
         bond_layout.addWidget(PairWidget('Bond Type', self.bond_type))
 
+        self.bridge_group = QtGui.QGroupBox('Bridge Options')
+        bridge_layout = QtGui.QVBoxLayout()
+        self.bridge_group.setLayout(bridge_layout)
+        self.bridge_group.setVisible(False)
+        input_layout.addWidget(self.bridge_group)
+        self.bridge_type = QtGui.QComboBox()
+        self.bridge_type.addItem('OVS')
+        self.bridge_type.addItem('OVS User')
+        self.bridge_type.currentIndexChanged.connect(self._bridge_changed)
+        bridge_layout.addWidget(PairWidget('Bridge Type', self.bridge_type))
+
         input_layout.addStretch()
 
         params_layout = QtGui.QHBoxLayout()
@@ -938,6 +949,10 @@ class MainForm(QtGui.QMainWindow):
             self.bond_group.setVisible(True)
         else:
             self.bond_group.setVisible(False)
+        if d['type'] == 'ovs_bridge':
+            self.bridge_group.setVisible(True)
+        else:
+            self.bridge_group.setVisible(False)
 
         self.network_type.setCurrentIndex(
             self.network_type.findText(d.get('network', 'None')))
@@ -966,6 +981,11 @@ class MainForm(QtGui.QMainWindow):
                 self.bond_type.setCurrentIndex(1)
             elif d.get('bond_type', 'ovs') == 'team':
                 self.bond_type.setCurrentIndex(2)
+        if d['type'] == 'ovs_bridge':
+            if d.get('bridge_type', 'ovs') == 'ovs':
+                self.bridge_type.setCurrentIndex(0)
+            elif d.get('bridge_type', 'ovs') == 'ovs_user':
+                self.bridge_type.setCurrentIndex(1)
 
     def _network_type_changed(self, _):
         new_name = self.network_type.currentText()
@@ -1060,6 +1080,14 @@ class MainForm(QtGui.QMainWindow):
             current_item = get_current_item(self.nested_interfaces)
         d = current_item.data()
         d['bond_type'] = new_name.lower()
+        current_item.setData(d)
+
+    def _bridge_changed(self, _):
+        new_name = self.bridge_type.currentText()
+        if self._last_selected is self.interfaces:
+            current_item = get_current_item(self.interfaces)
+        d = current_item.data()
+        d['bridge_type'] = new_name.lower().replace(' ', '_')
         current_item.setData(d)
 
 if __name__ == '__main__':
