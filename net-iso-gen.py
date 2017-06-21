@@ -281,12 +281,12 @@ class MainForm(QtGui.QMainWindow):
                                             self.control_mask))
 
         self.control_route = QtGui.QLineEdit()
-        self.control_route.setText('192.0.2.1')
+        self.control_route.setText('192.168.24.1')
         control_layout.addWidget(PairWidget('Gateway',
                                             self.control_route))
 
         self.control_ec2 = QtGui.QLineEdit()
-        self.control_ec2.setText('192.0.2.1')
+        self.control_ec2.setText('192.168.24.1')
         control_layout.addWidget(PairWidget('EC2 Metadata',
                                             self.control_ec2))
 
