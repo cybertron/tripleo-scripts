@@ -76,6 +76,9 @@ class TestOutput(unittest.TestCase):
     def test_ipv6_multi(self):
         self._test('test-data/ipv6-multi')
 
+    def test_ovs_dpdk(self):
+        self._test('test-data/ovs-dpdk')
+
 class TestValidations(unittest.TestCase):
     def _load_data(self, name):
         with open('test-data/%s/nic-input.json' % name) as f:
