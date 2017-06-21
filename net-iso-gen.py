@@ -103,7 +103,7 @@ class MainForm(QtGui.QMainWindow):
         self.show()
 
     def _setup_ui(self):
-        self.resize(1280, 700)
+        self.resize(1280, 800)
         self.setWindowTitle('Network Isolation Template Generator')
 
         self.setCentralWidget(QtGui.QWidget())
