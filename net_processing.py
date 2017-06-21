@@ -21,7 +21,10 @@ import yaml
 
 import netaddr
 
-PARAMS = """heat_template_version: 2015-04-30
+TEMPLATE_VERSION = {1: '2015-04-30',
+                    2: 'ocata',
+                    }
+PARAMS = """heat_template_version: %s
 
 parameters:
   ControlPlaneIp:
@@ -112,6 +115,21 @@ resources:
           network_config:
 """
 BASE_RESOURCE = yaml.safe_load(BASE_RESOURCE_YAML)
+BASE_RESOURCE_YAML_2 = """
+resources:
+  OsNetConfigImpl:
+    type: OS::Heat::SoftwareConfig
+    properties:
+      group: script
+      config:
+        str_replace:
+          template:
+            get_file: /usr/share/openstack-tripleo-heat-templates/network/scripts/run-os-net-config.sh
+          params:
+            $network_config:
+              network_config:
+"""
+BASE_RESOURCE_2 = yaml.safe_load(BASE_RESOURCE_YAML_2)
 OUTPUTS = """
 outputs:
   OS::stack_id:
@@ -239,19 +257,30 @@ def _write_nic_configs(data, global_data, base_path):
         os.mkdir(nic_path)
     except OSError:
         pass
+    template_version = global_data.get('version', 1)
 
     def new_resource():
-        resources = copy.deepcopy(BASE_RESOURCE)
-        network_config = resources['resources']['OsNetConfigImpl']
-        network_config = network_config['properties']['config']
-        network_config = network_config['os_net_config']
-        network_config['network_config'] = []
-        network_config = network_config['network_config']
+        if template_version == 1:
+            resources = copy.deepcopy(BASE_RESOURCE)
+            network_config = resources['resources']['OsNetConfigImpl']
+            network_config = network_config['properties']['config']
+            network_config = network_config['os_net_config']
+            network_config['network_config'] = []
+            network_config = network_config['network_config']
+        else:
+            # Version 2, using os-net-config script from tht
+            resources = copy.deepcopy(BASE_RESOURCE_2)
+            network_config = resources['resources']['OsNetConfigImpl']
+            network_config = network_config['properties']['config']
+            network_config = network_config['str_replace']['params']
+            network_config = network_config['$network_config']
+            network_config['network_config'] = []
+            network_config = network_config['network_config']
         return (resources, network_config)
 
     for filename, node_data in data.items():
         with open(os.path.join(nic_path, filename), 'w') as f:
-            f.write(PARAMS)
+            f.write(PARAMS % TEMPLATE_VERSION[template_version])
             resources, network_config = new_resource()
             for i in node_data:
                 _process_network_config(i, filename,

@@ -73,6 +73,9 @@ class TestOutput(unittest.TestCase):
     def test_all_the_things(self):
         self._test('test-data/all-the-things')
 
+    def test_all_the_things_v2(self):
+        self._test('test-data/all-the-things-v2')
+
     def test_ipv6_multi(self):
         self._test('test-data/ipv6-multi')
 

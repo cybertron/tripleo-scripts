@@ -481,6 +481,16 @@ class MainForm(QtGui.QMainWindow):
         self.ipv6.setToolTip('Configure networks to use IPv6 when possible.')
         general_layout.addWidget(PairWidget('IPv6', self.ipv6))
 
+        self.version_box = QtGui.QSpinBox()
+        self.version_box.setMinimum(1)
+        self.version_box.setMaximum(2)
+        self.version_box.setValue(2)
+        self.version_box.setToolTip('Version 2 templates should be used when '
+                                    'targeting a version of TripleO that is '
+                                    'Ocata or later.  Version 1 templates '
+                                    'are required for Newton and older.')
+        general_layout.addWidget(PairWidget('Version', self.version_box))
+
         generate_layout = QtGui.QHBoxLayout()
         self.base_path = QtGui.QLineEdit('templates')
         self.base_path.setToolTip('network-[environment|isolation].yaml will '
@@ -612,6 +622,7 @@ class MainForm(QtGui.QMainWindow):
         retval['bond_options'] = self.bond_options.text()
         retval['auto_routes'] = self.auto_routes.isChecked()
         retval['ipv6'] = self.ipv6.isChecked()
+        retval['version'] = self.version_box.value()
         return retval
 
     def _dict_to_global(self, data):
@@ -643,6 +654,7 @@ class MainForm(QtGui.QMainWindow):
         self.bond_options.setText(data.get('bond_options', ''))
         self.auto_routes.setChecked(data.get('auto_routes', True))
         self.ipv6.setChecked(data.get('ipv6', False))
+        self.version_box.setValue(data.get('version', 1))
 
     def _error(self, message):
         QtGui.QMessageBox.critical(self, 'Error', message)
