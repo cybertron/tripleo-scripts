@@ -17,6 +17,10 @@ thing if you're going to use this tool.
 
 On Red Hat-based platforms, these can be installed with `yum install PyQt4 python-netaddr`
 
+### News ###
+
+See [my blog](http://blog.nemebean.com/tags/net-iso-gen) for the latest news about the tool.
+
 ### Usage ###
 
 Since this is a GUI tool, it's easiest to run it on your workstation, as opposed
