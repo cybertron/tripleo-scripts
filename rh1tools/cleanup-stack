@@ -1,0 +1,75 @@
+#!/bin/bash
+
+set -ex
+
+num=$1
+endnum=${2:-$1}
+numlist=$(seq $num $endnum)
+start=$(date +'%s')
+
+echo 'Deleting servers'
+unset grep_pattern
+for i in $numlist
+do
+    if [ -n "${grep_pattern:-}" ]
+    then
+        grep_pattern="${grep_pattern}|"
+    fi
+    grep_pattern="${grep_pattern}baremetal-${i}_|bmc-${i} "
+done
+for i in `nova list | egrep "$grep_pattern" | awk '{print $2}'`; do nova delete $i& done
+
+wait
+sleep 5
+
+echo 'Deleting ports'
+unset grep_pattern
+for i in $numlist
+do
+    if [ -n "${grep_pattern:-}" ]
+    then
+        grep_pattern="${grep_pattern}|"
+    fi
+    grep_pattern="${grep_pattern}baremetal-${i}_|bmc-${i}_|utility_bmc-${i} "
+done
+for i in `neutron port-list | egrep "$grep_pattern" | awk '{print $2}'`; do neutron port-delete $i& done
+
+wait
+
+echo 'Deleting subnets'
+unset grep_pattern
+for i in $numlist
+do
+    if [ -n "${grep_pattern:-}" ]
+    then
+        grep_pattern="${grep_pattern}|"
+    fi
+    grep_pattern="${grep_pattern}\-${i} "
+done
+for i in `neutron subnet-list | egrep "$grep_pattern" | awk '{print $2}'`; do neutron subnet-delete $i& done
+
+wait
+
+echo 'Deleting networks'
+unset grep_pattern
+for i in $numlist
+do
+    if [ -n "${grep_pattern:-}" ]
+    then
+        grep_pattern="${grep_pattern}|"
+    fi
+    grep_pattern="${grep_pattern}\-${i} "
+done
+for i in `neutron net-list | egrep "$grep_pattern" | awk '{print $2}'`; do neutron net-delete $i& done
+
+wait
+
+echo 'Deleting stacks'
+#heat stack-delete -y baremetal_$num
+for i in $numlist
+do
+    heat stack-delete -y baremetal_$i &
+done
+wait
+end=$(date +'%s')
+echo "Finished cleaning $num to $endnum in $(($end - $start)) seconds"
