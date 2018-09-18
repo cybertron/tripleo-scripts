@@ -48,7 +48,7 @@ and a local copy of tripleo-heat-templates exists at ~/tht, an example usage wou
 undercloud_wizard.py
 --------------------
 
-DEPRECATED: See http://ucw-bnemec.rhcloud.com instead.
+DEPRECATED: See http://ucw.tripleo.org instead.
 
 A PyQt GUI to help with generating undercloud.conf.  See details in the
 docstring at the top of the file.
