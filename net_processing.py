@@ -43,6 +43,12 @@ parameters:
       Unless the default is changed, the parameter is automatically resolved
       from the subnet host_routes attribute.
     type: json
+  ExternalMtu:
+    default: 1500
+    description: The maximum transmission unit (MTU) size(in bytes) that is
+      guaranteed to pass through the data path of the segments in the
+      external network.
+    type: number
   InternalApiIpSubnet:
     default: ''
     description: IP address/subnet on the internal_api network
@@ -55,6 +61,12 @@ parameters:
       Unless the default is changed, the parameter is automatically resolved
       from the subnet host_routes attribute.
     type: json
+  InternalApiMtu:
+    default: 1500
+    description: The maximum transmission unit (MTU) size(in bytes) that is
+      guaranteed to pass through the data path of the segments in the
+      internal_api network.
+    type: number
   StorageIpSubnet:
     default: ''
     description: IP address/subnet on the storage network
@@ -67,6 +79,12 @@ parameters:
       Unless the default is changed, the parameter is automatically resolved
       from the subnet host_routes attribute.
     type: json
+  StorageMtu:
+    default: 1500
+    description: The maximum transmission unit (MTU) size(in bytes) that is
+      guaranteed to pass through the data path of the segments in the
+      storage network.
+    type: number
   StorageMgmtIpSubnet:
     default: ''
     description: IP address/subnet on the storage_mgmt network
@@ -79,6 +97,12 @@ parameters:
       Unless the default is changed, the parameter is automatically resolved
       from the subnet host_routes attribute.
     type: json
+  StorageMgmtMtu:
+    default: 1500
+    description: The maximum transmission unit (MTU) size(in bytes) that is
+      guaranteed to pass through the data path of the segments in the
+      storage_mgmt network.
+    type: number
   TenantIpSubnet:
     default: ''
     description: IP address/subnet on the tenant network
@@ -91,6 +115,12 @@ parameters:
       Unless the default is changed, the parameter is automatically resolved
       from the subnet host_routes attribute.
     type: json
+  TenantMtu:
+    default: 1500
+    description: The maximum transmission unit (MTU) size(in bytes) that is
+      guaranteed to pass through the data path of the segments in the
+      tenant network.
+    type: number
   ManagementIpSubnet: # Only populated when including environments/network-management.yaml
     default: ''
     description: IP address/subnet on the management network
@@ -103,6 +133,12 @@ parameters:
       Unless the default is changed, the parameter is automatically resolved
       from the subnet host_routes attribute.
     type: json
+  ManagementMtu:
+    default: 1500
+    description: The maximum transmission unit (MTU) size(in bytes) that is
+      guaranteed to pass through the data path of the segments in the
+      management network.
+    type: number
   BondInterfaceOvsOptions:
     default: 'bond_mode=active-backup'
     description: The ovs_options string for the bond interface. Set things like
@@ -151,6 +187,12 @@ parameters:
       Unless the default is changed, the parameter is automatically resolved
       from the subnet host_routes attribute.
     type: json
+  ControlPlaneMtu:
+    default: 1500
+    description: The maximum transmission unit (MTU) size(in bytes) that is
+      guaranteed to pass through the data path of the segments in the network.
+      (The parameter is automatically resolved from the ctlplane network's mtu attribute.)
+    type: number
   DnsServers: # Override this via parameter_defaults
     default: []
     description: A list of DNS servers (2 max for some implementations) that will be added to resolv.conf.
